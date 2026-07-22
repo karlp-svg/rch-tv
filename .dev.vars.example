@@ -1,0 +1,12 @@
+# Local development environment variables for Cloudflare Pages
+# Copy this file to .dev.vars and fill in your values
+
+# PostgreSQL connection (Supabase recommended)
+DATABASE_URL=postgresql://postgres:[YOUR_PASSWORD]@db.[YOUR_PROJECT_REF].supabase.co:6543/postgres?pgbouncer=true
+
+# DJ Console authentication
+DJ_CONSOLE_USERNAME=dj
+DJ_CONSOLE_PASSWORD=your_secure_local_password
+
+# Public app URL for QR code generation
+NEXT_PUBLIC_PUBLIC_APP_URL=http://localhost:3000

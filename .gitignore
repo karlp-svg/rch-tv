@@ -1,0 +1,13 @@
+node_modules/
+.next/
+.env
+.env.*
+!.env.example
+*.log
+npm-debug.log*
+.DS_Store
+*.pem
+*.cert
+*.key
+public/fonts/HugeSmile.otf
+scripts/*.bak
