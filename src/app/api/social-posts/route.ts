@@ -2,7 +2,6 @@ import { db, ensureDatabaseCompatibility } from '@/db';
 import { socialPosts } from '@/db/schema';
 import { NextResponse } from 'next/server';
 import { desc, eq } from 'drizzle-orm';
-import { uploadImage, deleteImage, isStorageConfigured } from '@/lib/storage';
 
 export const dynamic = 'force-dynamic';
 
