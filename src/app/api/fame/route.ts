@@ -3,7 +3,6 @@ import { fameSubmissions } from '@/db/schema';
 import { NextResponse } from 'next/server';
 import { desc } from 'drizzle-orm';
 import { hasProfanity } from '@/lib/profanity';
-import { uploadImage, isStorageConfigured } from '@/lib/storage';
 import { validatePublicSession } from '@/lib/session';
 
 export const dynamic = 'force-dynamic';
