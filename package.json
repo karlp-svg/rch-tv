@@ -1,6 +1,5 @@
 {
-  "name": "rch-tv",
-  "version": "1.0.0",
+  "name": "nextjs-postgresql-template",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -8,30 +7,35 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "db:push": "drizzle-kit push"
+    "db:push": "drizzle-kit push",
+    "deploy:cf": "wrangler pages deploy .next --project-name=rch-tv",
+    "dev:cf": "wrangler pages dev .next --local"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.110.4",
+    "@types/qrcode": "^1.5.6",
+    "bad-words": "^4.0.0",
+    "dotenv": "17.3.1",
+    "drizzle-orm": "0.45.2",
+    "lucide-react": "^1.23.0",
     "next": "16.2.6",
+    "pg": "8.20.0",
+    "qrcode": "^1.5.4",
     "react": "19.2.6",
     "react-dom": "19.2.6",
-    "drizzle-orm": "0.45.2",
-    "pg": "8.20.0",
-    "dotenv": "17.3.1",
-    "lucide-react": "^1.23.0",
-    "bad-words": "4.0.0",
-    "qrcode": "1.5.4"
+    "wrangler": "^4.113.0"
   },
   "devDependencies": {
-    "typescript": "5.9.3",
+    "@tailwindcss/postcss": "4.1.17",
     "@types/node": "22.19.15",
+    "@types/pg": "8.18.0",
     "@types/react": "19.2.14",
     "@types/react-dom": "19.2.3",
     "drizzle-kit": "0.31.10",
-    "@types/pg": "8.18.0",
-    "tailwindcss": "4.1.17",
-    "@tailwindcss/postcss": "4.1.17",
-    "postcss": "8.5.8",
     "eslint": "9.39.4",
-    "eslint-config-next": "16.2.6"
+    "eslint-config-next": "16.2.6",
+    "postcss": "8.5.8",
+    "tailwindcss": "4.1.17",
+    "typescript": "5.9.3"
   }
 }
