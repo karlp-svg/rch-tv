@@ -37,18 +37,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'postType and imageBase64 are required' }, { status: 400 });
     }
 
-    let imageUrl: string | null = null;
-    let b64Fallback: string | null = imageBase64;
-
-    if (isStorageConfigured()) {
-      imageUrl = await uploadImage(imageBase64, 'social');
-      if (imageUrl) b64Fallback = null;
-    }
-
     const inserted = await db.insert(socialPosts).values({
       postType,
-      imageBase64: b64Fallback,
-      imageUrl,
+      imageBase64,
+      imageUrl: null,
     }).returning();
 
     return NextResponse.json({
@@ -70,13 +62,8 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ error: 'Missing id' }, { status: 400 });
     }
 
-    const [row] = await db.select({ imageUrl: socialPosts.imageUrl })
-      .from(socialPosts).where(eq(socialPosts.id, id)).limit(1);
-    if (row?.imageUrl) {
-      await deleteImage(row.imageUrl);
-    }
-
     await db.delete(socialPosts).where(eq(socialPosts.id, id));
+
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Error deleting social post:', error);

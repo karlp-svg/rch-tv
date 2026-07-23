@@ -1,8 +1,7 @@
 import { db, ensureDatabaseCompatibility } from '@/db';
 import { shoutouts, songRequests, fameSubmissions, instagramFollowers } from '@/db/schema';
 import { NextResponse } from 'next/server';
-import { desc, eq, sql, inArray, or, asc } from 'drizzle-orm';
-import { deleteImage } from '@/lib/storage';
+import { desc, eq, sql, inArray, asc } from 'drizzle-orm';
 
 export const dynamic = 'force-dynamic';
 
@@ -26,7 +25,7 @@ export async function GET() {
         createdAt: fameSubmissions.createdAt,
       }).from(fameSubmissions).orderBy(desc(fameSubmissions.createdAt)).limit(100),
     ]);
-    
+
     const allHandlesSet = new Set<string>();
     for (const item of [...shoutoutList, ...songList, ...fameList]) {
       if (item.instagramHandle) {
@@ -83,15 +82,13 @@ async function countInProgress(): Promise<number> {
   return (s[0]?.c || 0) + (song[0]?.c || 0) + (fame[0]?.c || 0);
 }
 
-/** Promote the oldest queued item (any type) to in_progress. Returns the promoted item or null. */
 export async function promoteNextQueued(): Promise<{ type: string; id: number } | null> {
-  // Find oldest queued across all types
   const [queuedShoutouts, queuedSongs, queuedFame] = await Promise.all([
-    db.select({ id: shoutouts.id, createdAt: shoutouts.createdAt, type: sql<string>`'shoutout'` })
+    db.select({ id: shoutouts.id, createdAt: shoutouts.createdAt })
       .from(shoutouts).where(eq(shoutouts.status, 'queued')).orderBy(asc(shoutouts.createdAt)).limit(1),
-    db.select({ id: songRequests.id, createdAt: songRequests.createdAt, type: sql<string>`'song'` })
+    db.select({ id: songRequests.id, createdAt: songRequests.createdAt })
       .from(songRequests).where(eq(songRequests.status, 'queued')).orderBy(asc(songRequests.createdAt)).limit(1),
-    db.select({ id: fameSubmissions.id, createdAt: fameSubmissions.createdAt, type: sql<string>`'fame'` })
+    db.select({ id: fameSubmissions.id, createdAt: fameSubmissions.createdAt })
       .from(fameSubmissions).where(eq(fameSubmissions.status, 'queued')).orderBy(asc(fameSubmissions.createdAt)).limit(1),
   ]);
 
@@ -124,7 +121,6 @@ export async function PATCH(request: Request) {
     const body = await request.json();
     const { type, id, status, action } = body;
 
-    // Special action: complete current and promote next
     if (action === 'complete_and_promote') {
       const { type: itemType, id: itemId } = body;
       if (!itemType || !itemId) {
@@ -147,7 +143,6 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ success: true, promoted });
     }
 
-    // Special action: approve (smart queue)
     if (action === 'approve') {
       if (!type || !id) {
         return NextResponse.json({ error: 'Missing type/id' }, { status: 400 });
@@ -170,14 +165,13 @@ export async function PATCH(request: Request) {
       }
       return NextResponse.json({ success: true, status: targetStatus });
     }
-    
+
     if (!VALID_STATUSES.includes(status)) {
       return NextResponse.json({ error: 'Invalid status' }, { status: 400 });
     }
-    
+
     const typedStatus = status as Status;
 
-    // If forcing something to 'in_progress', mark existing in_progress items as complete
     if (typedStatus === 'in_progress') {
       await Promise.all([
         db.update(shoutouts).set({ status: 'complete' }).where(eq(shoutouts.status, 'in_progress')),
@@ -185,7 +179,7 @@ export async function PATCH(request: Request) {
         db.update(fameSubmissions).set({ status: 'complete' }).where(eq(fameSubmissions.status, 'in_progress')),
       ]);
     }
-    
+
     switch (type) {
       case 'shoutout':
         await db.update(shoutouts).set({ status: typedStatus }).where(eq(shoutouts.id, id));
@@ -200,11 +194,10 @@ export async function PATCH(request: Request) {
         return NextResponse.json({ error: 'Invalid type' }, { status: 400 });
     }
 
-    // If we just completed something, promote next queued
     if (typedStatus === 'complete') {
       await promoteNextQueued();
     }
-    
+
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error(error);
@@ -216,7 +209,7 @@ export async function DELETE(request: Request) {
   try {
     await ensureDatabaseCompatibility();
     const { type, id, deleteAll } = await request.json();
-    
+
     if (deleteAll) {
       switch (type) {
         case 'shoutout':
@@ -237,7 +230,7 @@ export async function DELETE(request: Request) {
     if (!id) {
       return NextResponse.json({ error: 'Missing id' }, { status: 400 });
     }
-    
+
     switch (type) {
       case 'shoutout':
         await db.delete(shoutouts).where(eq(shoutouts.id, id));
@@ -245,22 +238,13 @@ export async function DELETE(request: Request) {
       case 'song':
         await db.delete(songRequests).where(eq(songRequests.id, id));
         break;
-      case 'fame': {
-        const [row] = await db.select({
-          imageUrl: fameSubmissions.imageUrl,
-          polaroidUrl: fameSubmissions.polaroidUrl,
-        }).from(fameSubmissions).where(eq(fameSubmissions.id, id)).limit(1);
-        if (row) {
-          await deleteImage(row.imageUrl);
-          await deleteImage(row.polaroidUrl);
-        }
+      case 'fame':
         await db.delete(fameSubmissions).where(eq(fameSubmissions.id, id));
         break;
-      }
       default:
         return NextResponse.json({ error: 'Invalid type' }, { status: 400 });
     }
-    
+
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error(error);

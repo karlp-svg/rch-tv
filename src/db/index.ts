@@ -1,11 +1,10 @@
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 
-const databaseUrl = process.env.DATABASE_URL || 'postgresql://placeholder:placeholder@localhost:5432/placeholder';
+const databaseUrl = process.env.DATABASE_URL;
 
-// Only validate at runtime, not build time
-if (process.env.NODE_ENV === 'production' && !process.env.DATABASE_URL) {
-  console.error('DATABASE_URL is required in production');
+if (!databaseUrl) {
+  throw new Error("DATABASE_URL is required");
 }
 
 const globalForDb = globalThis as typeof globalThis & {
