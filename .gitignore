@@ -11,3 +11,4 @@ npm-debug.log*
 *.key
 public/fonts/HugeSmile.otf
 scripts/*.bak
+.open-next/
