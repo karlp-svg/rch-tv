@@ -16,8 +16,7 @@
     "drizzle-orm": "0.45.2",
     "lucide-react": "^1.23.0",
     "next": "16.2.11",
-    "pg": "8.20.0",
-    "pg-cloudflare": "1.4.0",
+    "pg": "8.10.0",
     "qrcode": "^1.5.4",
     "react": "19.2.6",
     "react-dom": "19.2.6"
