@@ -32,9 +32,8 @@ export function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  // 4. DJ Console pages
+  // 4. DJ Console pages - DJ layout handles auth via auth-guard component
   if (pathname === '/dj' || pathname.startsWith('/dj/')) {
-    // Let the DJ layout's auth-guard component handle auth client-side
     return NextResponse.next();
   }
 
@@ -70,21 +69,9 @@ export function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  // 6. User app pages - in production, require session query param
-  const userPages = ['/dashboard', '/shoutout', '/song-request', '/make-famous'];
-  if (userPages.includes(pathname)) {
-    const isProduction = process.env.NEXT_PUBLIC_PRODUCTION_MODE === 'true';
-    if (isProduction) {
-      const sessionToken = req.nextUrl.searchParams.get('session');
-      if (!sessionToken) {
-        // No session token — redirect to landing
-        return NextResponse.redirect(new URL('/', req.url));
-      }
-    }
-    return NextResponse.next();
-  }
-
-  // 7. Everything else (landing, TV display) - allow through
+  // 6. Everything else (landing, TV display, user pages) - allow through
+  // Session validation for user pages is handled client-side via useRequireValidSession
+  // The session token is stored in localStorage after QR scan, not in the URL
   return NextResponse.next();
 }
 

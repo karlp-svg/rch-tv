@@ -40,6 +40,11 @@ export async function getOrCreatePublicSession(): Promise<string> {
 export async function validatePublicSession(token: string | null | undefined): Promise<boolean> {
   if (!token) return false;
   const current = await getPublicSession();
-  if (!current) return false;
+  if (!current) {
+    // No session in DB yet (TV display might not have loaded).
+    // Accept the token and set it now so it persists.
+    await setPublicSession(token);
+    return true;
+  }
   return token === current;
 }
