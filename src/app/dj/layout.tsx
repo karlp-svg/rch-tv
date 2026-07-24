@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
+import DJAuthGuard from './auth-guard';
 
 export const metadata: Metadata = {
   title: "RCH TV — DJ Console",
@@ -13,5 +14,5 @@ export const viewport: Viewport = {
 };
 
 export default function DJLayout({ children }: { children: ReactNode }) {
-  return <>{children}</>;
+  return <DJAuthGuard>{children}</DJAuthGuard>;
 }

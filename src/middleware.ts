@@ -1,41 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-function unauthorized(realm = 'RCH TV') {
-  return new NextResponse('Authentication required', {
-    status: 401,
-    headers: {
-      'WWW-Authenticate': `Basic realm="${realm}"`,
-      'Cache-Control': 'no-store',
-    },
-  });
-}
-
-function hasValidBasicAuth(req: NextRequest) {
-  // Read env vars directly - required for Vercel Edge runtime compatibility
-  const djPass = process.env.DJ_CONSOLE_PASSWORD;
-  if (!djPass || djPass.length === 0) return true; // no password set = no auth
-
-  const djUser = process.env.DJ_CONSOLE_USERNAME || 'dj';
-  const auth = req.headers.get('authorization');
-  if (!auth || !auth.startsWith('Basic ')) return false;
-
-  try {
-    const decoded = atob(auth.slice(6));
-    const colonIndex = decoded.indexOf(':');
-    if (colonIndex === -1) return false;
-    const username = decoded.slice(0, colonIndex);
-    const password = decoded.slice(colonIndex + 1);
-    return username === djUser && password === djPass;
-  } catch {
-    return false;
-  }
-}
-
-function isSandbox(): boolean {
-  return process.env.NEXT_PUBLIC_PRODUCTION_MODE !== 'true';
-}
-
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
@@ -67,12 +32,9 @@ export function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  // 4. DJ Console pages - require Basic Auth
-  //    Only /dj and /dj/* paths trigger the browser's built-in auth dialog
+  // 4. DJ Console pages
   if (pathname === '/dj' || pathname.startsWith('/dj/')) {
-    if (!hasValidBasicAuth(req)) {
-      return unauthorized('DJ Console');
-    }
+    // Let the DJ layout's auth-guard component handle auth client-side
     return NextResponse.next();
   }
 
@@ -82,24 +44,44 @@ export function middleware(req: NextRequest) {
     pathname.startsWith('/api/settings') ||
     pathname.startsWith('/api/social-posts')
   ) {
-    if (!hasValidBasicAuth(req)) {
-      return unauthorized('DJ Console');
+    const djPass = process.env.DJ_CONSOLE_PASSWORD;
+    if (djPass && djPass.length > 0) {
+      const djUser = process.env.DJ_CONSOLE_USERNAME || 'dj';
+      const auth = req.headers.get('authorization');
+      if (!auth || !auth.startsWith('Basic ')) {
+        return new NextResponse('Authentication required', {
+          status: 401,
+          headers: {
+            'WWW-Authenticate': 'Basic realm="DJ Console"',
+            'Cache-Control': 'no-store',
+          },
+        });
+      }
+      try {
+        const decoded = atob(auth.slice(6));
+        const colonIndex = decoded.indexOf(':');
+        if (colonIndex === -1 || decoded.slice(0, colonIndex) !== djUser || decoded.slice(colonIndex + 1) !== djPass) {
+          return new NextResponse('Unauthorized', { status: 401 });
+        }
+      } catch {
+        return new NextResponse('Unauthorized', { status: 401 });
+      }
     }
     return NextResponse.next();
   }
 
-  // 6. User app pages - in production, validate session param
-  if (!isSandbox()) {
-    const userPages = ['/dashboard', '/shoutout', '/song-request', '/make-famous'];
-    if (userPages.includes(pathname)) {
-      // Require session param in URL for production access
+  // 6. User app pages - in production, require session query param
+  const userPages = ['/dashboard', '/shoutout', '/song-request', '/make-famous'];
+  if (userPages.includes(pathname)) {
+    const isProduction = process.env.NEXT_PUBLIC_PRODUCTION_MODE === 'true';
+    if (isProduction) {
       const sessionToken = req.nextUrl.searchParams.get('session');
       if (!sessionToken) {
-        // No session token - let client-side redirect handle it
-        // The useRequireValidSession hook will redirect to /
-        return NextResponse.next();
+        // No session token — redirect to landing
+        return NextResponse.redirect(new URL('/', req.url));
       }
     }
+    return NextResponse.next();
   }
 
   // 7. Everything else (landing, TV display) - allow through
