@@ -33,7 +33,7 @@ function hasValidBasicAuth(req: NextRequest) {
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  // Static assets - always allow
+  // 1. Static assets - always allow
   if (
     pathname.startsWith('/_next') ||
     pathname.startsWith('/fonts') ||
@@ -43,7 +43,7 @@ export function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  // Public API routes - always allow (session validation happens in the route handler)
+  // 2. Public API routes - always allow (session validation happens in the route handler)
   if (
     pathname.startsWith('/api/session') ||
     pathname.startsWith('/api/health') ||
@@ -56,12 +56,20 @@ export function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  // Public session endpoint (needed for TV QR code) - allow through
+  // 3. Public session endpoint (needed for TV QR code) - allow through
   if (pathname === '/api/admin/session') {
     return NextResponse.next();
   }
 
-  // Admin API routes - require Basic Auth
+  // 4. DJ Console pages - require Basic Auth
+  if (pathname === '/dj' || pathname.startsWith('/dj/')) {
+    if (!!DJ_AUTH_PASS && !hasValidBasicAuth(req)) {
+      return unauthorized();
+    }
+    return NextResponse.next();
+  }
+
+  // 5. Admin API routes - require Basic Auth (after /api/admin/session is allowed above)
   if (
     pathname.startsWith('/api/admin') ||
     pathname.startsWith('/api/settings') ||
@@ -73,15 +81,7 @@ export function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  // DJ Console pages - require Basic Auth
-  if (pathname === '/dj' || pathname.startsWith('/dj/')) {
-    if (!!DJ_AUTH_PASS && !hasValidBasicAuth(req)) {
-      return unauthorized();
-    }
-    return NextResponse.next();
-  }
-
-  // Everything else (public pages, TV, etc.) - allow through
+  // 6. Everything else (public pages, TV display, landing, dashboard, etc.) - allow through
   // Session validation happens client-side
   return NextResponse.next();
 }
