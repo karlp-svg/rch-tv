@@ -71,11 +71,12 @@ const VALID_STATUSES = ['verifying', 'queued', 'in_progress', 'complete', 'rejec
 
 async function countInProgress(): Promise<number> {
     const [s, song, fame] = await Promise.all([
-    db.select({ c: sql<number>`count(*) as c` }).from(shoutouts).where(eq(shoutouts.status, 'in_progress')),
-    db.select({ c: sql<number>`count(*) as c` }).from(songRequests).where(eq(songRequests.status, 'in_progress')),
-    db.select({ c: sql<number>`count(*) as c` }).from(fameSubmissions).where(eq(fameSubmissions.status, 'in_progress')),
+    db.select({ c: sql<string>`count(*) as c` }).from(shoutouts).where(eq(shoutouts.status, 'in_progress')),
+    db.select({ c: sql<string>`count(*) as c` }).from(songRequests).where(eq(songRequests.status, 'in_progress')),
+    db.select({ c: sql<string>`count(*) as c` }).from(fameSubmissions).where(eq(fameSubmissions.status, 'in_progress')),
   ]);
-  return (s[0]?.c || 0) + (song[0]?.c || 0) + (fame[0]?.c || 0);
+  // pg returns bigint as string — use Number() to ensure numeric addition
+  return Number(s[0]?.c ?? 0) + Number(song[0]?.c ?? 0) + Number(fame[0]?.c ?? 0);
 }
 
 async function promoteNextQueued(): Promise<{ type: string; id: number } | null> {

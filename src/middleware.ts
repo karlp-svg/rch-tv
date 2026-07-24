@@ -33,7 +33,7 @@ function hasValidBasicAuth(req: NextRequest) {
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  // 1. Static assets - always allow
+  // Static assets - always allow
   if (
     pathname.startsWith('/_next') ||
     pathname.startsWith('/fonts') ||
@@ -43,7 +43,8 @@ export function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  // 2. Public API routes - always allow (session validation happens in the route handler)
+  // Public API routes - always allow (session validation happens in the route handler)
+  // These NEVER return WWW-Authenticate so no browser auth popup
   if (
     pathname.startsWith('/api/session') ||
     pathname.startsWith('/api/health') ||
@@ -56,12 +57,14 @@ export function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  // 3. Public session endpoint (needed for TV QR code) - allow through
+  // Public session endpoint (needed for TV QR code) - allow through
+  // This is under /api/admin but MUST be accessible without auth
   if (pathname === '/api/admin/session') {
     return NextResponse.next();
   }
 
-  // 4. DJ Console pages - require Basic Auth
+  // DJ Console pages - require Basic Auth
+  // Only /dj and /dj/* trigger the browser's built-in auth prompt
   if (pathname === '/dj' || pathname.startsWith('/dj/')) {
     if (!!DJ_AUTH_PASS && !hasValidBasicAuth(req)) {
       return unauthorized();
@@ -69,7 +72,10 @@ export function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  // 5. Admin API routes - require Basic Auth (after /api/admin/session is allowed above)
+  // All other /api/admin, /api/settings, /api/social-posts routes require Basic Auth
+  // These return 401 with WWW-Authenticate header, but only /dj pages
+  // trigger the browser popup. Client-side fetch() calls from /dj will
+  // carry the cached Basic Auth credentials automatically.
   if (
     pathname.startsWith('/api/admin') ||
     pathname.startsWith('/api/settings') ||
@@ -81,8 +87,9 @@ export function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  // 6. Everything else (public pages, TV display, landing, dashboard, etc.) - allow through
-  // Session validation happens client-side
+  // Everything else (public pages, TV display, landing, dashboard, etc.) - allow through
+  // Session validation happens client-side. No WWW-Authenticate header is ever
+  // returned for these paths, so the browser never shows auth popups.
   return NextResponse.next();
 }
 
