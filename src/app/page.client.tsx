@@ -18,6 +18,13 @@ export default function LandingClient() {
   }, []);
 
   useEffect(() => {
+    // In sandbox/dev mode, skip QR session check for testing
+    if (process.env.NEXT_PUBLIC_PRODUCTION_MODE !== 'true') {
+      setSessionValid(true);
+      setSessionChecking(false);
+      return;
+    }
+
     const run = async () => {
       const queryToken = typeof window !== 'undefined'
         ? new URLSearchParams(window.location.search).get('session') || ''

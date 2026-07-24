@@ -22,6 +22,13 @@ export function useRequireValidSession() {
   const [valid, setValid] = useState(false);
 
   useEffect(() => {
+    // In sandbox/dev mode, skip session check for testing
+    if (process.env.NEXT_PUBLIC_PRODUCTION_MODE !== 'true') {
+      setValid(true);
+      setChecking(false);
+      return;
+    }
+
     const run = async () => {
       const token = getStoredPublicSession();
       if (!token) {
