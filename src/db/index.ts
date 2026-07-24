@@ -30,4 +30,5 @@ if (process.env.NODE_ENV !== "production") {
   globalForDb.__rchtvPgPool = pool;
 }
 
-export const db = drizzle(pool, { schema: require("./schema.pg") });
+import * as pgSchema from "./schema.pg";
+export const db = drizzle(pool, { schema: pgSchema });

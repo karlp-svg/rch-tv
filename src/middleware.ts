@@ -1,12 +1,38 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-const TARGET = process.env.DEPLOY_TARGET || 'public';
+const TARGET = process.env.DEPLOY_TARGET || 'single';
 const DJ_AUTH_USER = process.env.DJ_CONSOLE_USERNAME || 'dj';
 const DJ_AUTH_PASS = process.env.DJ_CONSOLE_PASSWORD;
 
-function unauthorized() {
-  return new NextResponse('Authentication required', {
+/**
+ * How this works (single Vercel deployment):
+ *
+ *   /dj            → DJ Console (Basic Auth if password set) — always open
+ *   /tv            → TV Display — always open
+ *   /api/*         → API routes — always open
+ *   /              → Landing page — only shows features if session is detected
+ *   /dashboard
+ *   /shoutout       → User pages — validated client-side via localStorage session
+ *   /song-request     The middleware lets these through; the client component
+ *   /make-famous       calls /api/session to verify and redirects to / if invalid
+ *
+ * The QR code URL format:
+ *   https://your-app.vercel.app/?session=abc123
+ *
+ * The landing page reads the session from the URL and stores it in localStorage.
+ * Internal navigation keeps the session via localStorage (not URL params).
+ */
+const USER_PAGES = new Set([
+  '/',
+  '/dashboard',
+  '/shoutout',
+  '/song-request',
+  '/make-famous',
+]);
+
+function unauthorized(msg = 'Authentication required') {
+  return new NextResponse(msg, {
     status: 401,
     headers: {
       'WWW-Authenticate': 'Basic realm="DJ Console"',
@@ -40,58 +66,30 @@ export function middleware(req: NextRequest) {
     pathname === '/favicon.ico' ||
     /\.[a-zA-Z0-9]{1,10}$/.test(pathname);
 
-  // Protect DJ console + admin APIs when DJ_CONSOLE_PASSWORD is set.
-  const needsDjAuth = !!DJ_AUTH_PASS && (
-    pathname === '/dj' ||
-    pathname.startsWith('/dj/') ||
-    pathname.startsWith('/api/admin') ||
-    pathname.startsWith('/api/settings') ||
-    pathname.startsWith('/api/social-posts') ||
-    // On dedicated DJ deployment, root rewrites to /dj, so protect '/'
-    (TARGET === 'dj' && pathname === '/')
-  );
-
-  if (needsDjAuth && !hasValidBasicAuth(req)) {
-    return unauthorized();
-  }
-
-  // Always allow other API routes, Next internals, static assets
+  // Always allow static assets and API routes
   if (pathname.startsWith('/api') || isStaticAsset) {
     return NextResponse.next();
   }
 
-  // DJ deployment: root shows DJ console, everything else redirects to it
-  if (TARGET === 'dj') {
-    if (pathname === '/') {
-      return NextResponse.rewrite(new URL('/dj', req.url));
-    }
-    if (!pathname.startsWith('/dj')) {
-      return NextResponse.redirect(new URL('/dj', req.url));
+  // --- DJ Console ---
+  if (pathname === '/dj' || pathname.startsWith('/dj/')) {
+    if (!!DJ_AUTH_PASS && !hasValidBasicAuth(req)) {
+      return unauthorized();
     }
     return NextResponse.next();
   }
 
-  // TV deployment: root shows TV display, everything else redirects to it
-  if (TARGET === 'tv') {
-    if (pathname === '/') {
-      return NextResponse.rewrite(new URL('/tv', req.url));
-    }
-    if (!pathname.startsWith('/tv')) {
-      return NextResponse.redirect(new URL('/tv', req.url));
-    }
+  // --- TV Display ---
+  if (pathname === '/tv' || pathname.startsWith('/tv/')) {
     return NextResponse.next();
   }
 
-  // Public deployment (only when explicitly set as 'public' in production)
-  // In dev / preview sandbox (where DEPLOY_TARGET is unset or not 'public'), allow viewing /dj and /tv directly.
-  if (
-    TARGET === 'public' &&
-    process.env.NODE_ENV === 'production' &&
-    process.env.VERCEL_ENV === 'production' &&
-    (pathname === '/dj' || pathname.startsWith('/dj/') ||
-     pathname === '/tv' || pathname.startsWith('/tv/'))
-  ) {
-    return NextResponse.redirect(new URL('/', req.url));
+  // --- User pages (session-protected via client-side) ---
+  // Let them through — the client component handles session validation
+  // by calling /api/session?token=xxx and redirects to / if invalid.
+  // The landing page (/) shows a "Scan QR code" state if no session present.
+  if (USER_PAGES.has(pathname)) {
+    return NextResponse.next();
   }
 
   return NextResponse.next();

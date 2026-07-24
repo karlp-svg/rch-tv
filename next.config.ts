@@ -1,10 +1,9 @@
 import type { NextConfig } from 'next';
-import { initOpenNextCloudflareForDev } from "@opennextjs/cloudflare";
-
-initOpenNextCloudflareForDev();
 
 const nextConfig: NextConfig = {
-  // D1 / SQLite doesn't need any special server externals
+  // Server components externals - needed for pg and @aws-sdk
+  serverExternalPackages: ['pg', 'better-sqlite3'],
+  // Vercel deployment with PostgreSQL
 };
 
 export default nextConfig;
