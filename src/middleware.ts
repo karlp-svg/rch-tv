@@ -3,18 +3,20 @@ import type { NextRequest } from 'next/server';
 
 const DJ_AUTH_USER = process.env.DJ_CONSOLE_USERNAME || 'dj';
 const DJ_AUTH_PASS = process.env.DJ_CONSOLE_PASSWORD;
+const DJ_AUTH_ENABLED = DJ_AUTH_PASS && DJ_AUTH_PASS.length > 0;
 
-function unauthorized() {
+function unauthorized(realm = 'DJ Console') {
   return new NextResponse('Authentication required', {
     status: 401,
     headers: {
-      'WWW-Authenticate': 'Basic realm="DJ Console"',
+      'WWW-Authenticate': `Basic realm="${realm}"`,
       'Cache-Control': 'no-store',
     },
   });
 }
 
 function hasValidBasicAuth(req: NextRequest) {
+  if (!DJ_AUTH_ENABLED) return true;
   const auth = req.headers.get('authorization');
   if (!auth || !auth.startsWith('Basic ')) return false;
 
@@ -33,7 +35,7 @@ function hasValidBasicAuth(req: NextRequest) {
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  // Static assets - always allow
+  // 1. Static assets - always allow
   if (
     pathname.startsWith('/_next') ||
     pathname.startsWith('/fonts') ||
@@ -43,8 +45,7 @@ export function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  // Public API routes - always allow (session validation happens in the route handler)
-  // These NEVER return WWW-Authenticate so no browser auth popup
+  // 2. Public API routes (have their own session validation) - always allow
   if (
     pathname.startsWith('/api/session') ||
     pathname.startsWith('/api/health') ||
@@ -57,39 +58,34 @@ export function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  // Public session endpoint (needed for TV QR code) - allow through
-  // This is under /api/admin but MUST be accessible without auth
+  // 3. Public session endpoint (needed for TV QR code) - allow through
   if (pathname === '/api/admin/session') {
     return NextResponse.next();
   }
 
-  // DJ Console pages - require Basic Auth
-  // Only /dj and /dj/* trigger the browser's built-in auth prompt
+  // 4. DJ Console pages - require Basic Auth
+  //    Only /dj and /dj/* paths trigger the browser's built-in auth dialog
   if (pathname === '/dj' || pathname.startsWith('/dj/')) {
-    if (!!DJ_AUTH_PASS && !hasValidBasicAuth(req)) {
+    if (DJ_AUTH_ENABLED && !hasValidBasicAuth(req)) {
       return unauthorized();
     }
     return NextResponse.next();
   }
 
-  // All other /api/admin, /api/settings, /api/social-posts routes require Basic Auth
-  // These return 401 with WWW-Authenticate header, but only /dj pages
-  // trigger the browser popup. Client-side fetch() calls from /dj will
-  // carry the cached Basic Auth credentials automatically.
+  // 5. Admin API routes (not session, handled above) - require Basic Auth
   if (
     pathname.startsWith('/api/admin') ||
     pathname.startsWith('/api/settings') ||
     pathname.startsWith('/api/social-posts')
   ) {
-    if (!!DJ_AUTH_PASS && !hasValidBasicAuth(req)) {
+    if (DJ_AUTH_ENABLED && !hasValidBasicAuth(req)) {
       return unauthorized();
     }
     return NextResponse.next();
   }
 
-  // Everything else (public pages, TV display, landing, dashboard, etc.) - allow through
-  // Session validation happens client-side. No WWW-Authenticate header is ever
-  // returned for these paths, so the browser never shows auth popups.
+  // 6. Everything else (landing, TV display, dashboard, etc.) - allow through
+  //    Session validation for user pages happens client-side via useRequireValidSession
   return NextResponse.next();
 }
 

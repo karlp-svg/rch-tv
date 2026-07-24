@@ -9,11 +9,20 @@ import { useEffect, useState } from 'react';
  */
 
 // Global flag: set to true once any field across any form has been typed.
-// Reset on page load (fresh visit starts rotating again).
+// Reset on page navigation (fresh page load restarts rotation).
 let globalHasInput = false;
 
 export function useRotatingPlaceholder(samples: string[], value: string, intervalMs = 2500): string {
   const [index, setIndex] = useState(0);
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    // Reset the global flag on mount so rotating works on fresh page visits
+    globalHasInput = false;
+    // Small delay to let React hydrate fully (fixes mobile rendering)
+    const timer = setTimeout(() => setReady(true), 100);
+    return () => clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
     if (samples.length <= 1) return;
@@ -23,8 +32,9 @@ export function useRotatingPlaceholder(samples: string[], value: string, interva
     return () => clearInterval(t);
   }, [samples.length, intervalMs]);
 
+  // Wait for ready state to avoid hydration mismatch
   // If this field or any other field has input, stop all rotation
-  if (globalHasInput || value.trim().length > 0) return '';
+  if (!ready || globalHasInput || value.trim().length > 0) return '';
   return samples[index] || '';
 }
 
