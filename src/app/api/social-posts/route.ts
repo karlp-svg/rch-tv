@@ -2,23 +2,28 @@ import { db, ensureDatabaseCompatibility } from '@/db';
 import { socialPosts } from '@/db/schema';
 import { NextResponse } from 'next/server';
 import { desc, eq } from 'drizzle-orm';
+import { saveBase64AsFile } from '@/lib/photoStorage';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
     await ensureDatabaseCompatibility();
-    const posts = await db
-      .select()
+    const rows = await db.select({
+      id: socialPosts.id,
+      postType: socialPosts.postType,
+      imageUrl: socialPosts.imageUrl,
+      createdAt: socialPosts.createdAt,
+    })
       .from(socialPosts)
       .orderBy(desc(socialPosts.createdAt))
       .limit(50);
 
     return NextResponse.json(
-      posts.map((p) => ({
+      rows.map((p) => ({
         id: p.id,
         postType: p.postType,
-        imageSrc: p.imageUrl || p.imageBase64 || null,
+        imageSrc: p.imageUrl || null,
         createdAt: p.createdAt,
       }))
     );
@@ -37,16 +42,19 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'postType and imageBase64 are required' }, { status: 400 });
     }
 
+    // Save to R2 — image loads from Cloudflare CDN, zero egress
+    const imageUrl = await saveBase64AsFile(imageBase64, `social-${postType}`);
+
     const inserted = await db.insert(socialPosts).values({
       postType,
-      imageBase64,
-      imageUrl: null,
+      imageBase64: null,
+      imageUrl,
     }).returning();
 
     return NextResponse.json({
       success: true,
       id: inserted[0].id,
-      imageSrc: inserted[0].imageUrl || inserted[0].imageBase64,
+      imageSrc: inserted[0].imageUrl,
     }, { status: 201 });
   } catch (error) {
     console.error('Error saving social post:', error);

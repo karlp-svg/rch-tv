@@ -3,6 +3,14 @@ import { fameSubmissions } from '@/db/schema';
 import { NextResponse } from 'next/server';
 import { eq } from 'drizzle-orm';
 
+/**
+ * Image proxy route.
+ *
+ * R2 photos:  Redirects (302) to the R2 public URL → browser loads from
+ *             Cloudflare CDN. Zero egress on Supabase, zero egress on R2.
+ *
+ * Legacy photos (base64 in DB):  Serves the buffer (temporary fallback).
+ */
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -13,10 +21,10 @@ export async function GET(
     const variant = searchParams.get('v'); // 'polaroid' or null (raw)
 
     const [row] = await db.select({
-      imageBase64: fameSubmissions.imageBase64,
-      polaroidBase64: fameSubmissions.polaroidBase64,
       imageUrl: fameSubmissions.imageUrl,
       polaroidUrl: fameSubmissions.polaroidUrl,
+      imageBase64: fameSubmissions.imageBase64,
+      polaroidBase64: fameSubmissions.polaroidBase64,
     })
       .from(fameSubmissions)
       .where(eq(fameSubmissions.id, parseInt(id, 10)))
@@ -26,13 +34,13 @@ export async function GET(
       return new NextResponse('Not found', { status: 404 });
     }
 
-    // Prefer Supabase Storage URL — redirect the browser straight to it
+    // R2 URL → redirect browser directly to Cloudflare CDN (zero egress)
     const url = variant === 'polaroid' && row.polaroidUrl ? row.polaroidUrl : row.imageUrl;
     if (url) {
       return NextResponse.redirect(url, 302);
     }
 
-    // Fall back to base64 stored in the DB
+    // Legacy base64 fallback (for photos uploaded before R2 migration)
     const raw = variant === 'polaroid' && row.polaroidBase64 ? row.polaroidBase64 : row.imageBase64;
     if (!raw) {
       return new NextResponse('No image data', { status: 404 });

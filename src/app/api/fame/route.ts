@@ -4,6 +4,7 @@ import { NextResponse } from 'next/server';
 import { desc } from 'drizzle-orm';
 import { hasProfanity } from '@/lib/profanity';
 import { validatePublicSession } from '@/lib/session';
+import { saveBase64AsFile } from '@/lib/photoStorage';
 
 export const dynamic = 'force-dynamic';
 
@@ -40,11 +41,19 @@ export async function POST(request: Request) {
 
     const autoRejected = hasProfanity(caption, instagramHandle);
 
+    // Upload both raw photo and polaroid to Cloudflare R2.
+    // DB stores only the public URL → image loads from Cloudflare CDN.
+    // Zero egress on Supabase, zero egress on R2.
+    const [imageUrl, polaroidUrl] = await Promise.all([
+      saveBase64AsFile(imageBase64, 'fame'),
+      polaroidBase64 ? saveBase64AsFile(polaroidBase64, 'polaroid') : Promise.resolve(null),
+    ]);
+
     const inserted = await db.insert(fameSubmissions).values({
-      imageBase64,
-      polaroidBase64: polaroidBase64 || null,
-      imageUrl: null,
-      polaroidUrl: null,
+      imageBase64: null,
+      polaroidBase64: null,
+      imageUrl,
+      polaroidUrl,
       caption: caption || null,
       name: null,
       instagramHandle: instagramHandle ? instagramHandle.replace(/^@+/, '').trim().slice(0, 100) : null,

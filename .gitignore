@@ -12,3 +12,4 @@ npm-debug.log*
 public/fonts/HugeSmile.otf
 scripts/*.bak
 .open-next/
+public/uploads/

@@ -42,8 +42,6 @@ export async function GET() {
 
       db.select({
         id: fameSubmissions.id,
-        polaroidBase64: fameSubmissions.polaroidBase64,
-        imageBase64: fameSubmissions.imageBase64,
         polaroidUrl: fameSubmissions.polaroidUrl,
         imageUrl: fameSubmissions.imageUrl,
         caption: fameSubmissions.caption,
@@ -58,8 +56,6 @@ export async function GET() {
 
       db.select({
         id: fameSubmissions.id,
-        polaroidBase64: fameSubmissions.polaroidBase64,
-        imageBase64: fameSubmissions.imageBase64,
         polaroidUrl: fameSubmissions.polaroidUrl,
         imageUrl: fameSubmissions.imageUrl,
         createdAt: fameSubmissions.createdAt,
@@ -85,8 +81,8 @@ export async function GET() {
       ...activeSongs.map((item) => ({ ...item, type: 'song' as const })),
       ...activeFame.map((item) => ({
         id: item.id,
-        polaroidSrc: item.polaroidUrl || item.imageBase64 || null,
-        imageSrc: item.imageUrl || item.polaroidBase64 || null,
+        polaroidSrc: item.polaroidUrl || null,
+        imageSrc: item.imageUrl || null,
         caption: item.caption,
         instagramHandle: item.instagramHandle,
         showHandleOnTv: item.showHandleOnTv,
@@ -100,7 +96,12 @@ export async function GET() {
     const response = NextResponse.json({
       current: live[0] || null,
       queue: live,
-      completedFame,
+      completedFame: completedFame.map((item) => ({
+        id: item.id,
+        polaroidSrc: item.polaroidUrl || null,
+        imageSrc: item.imageUrl || null,
+        createdAt: item.createdAt,
+      })),
       fameSettings: {
         photoSize: parseInt(settings.fame_photo_size || '42', 10),
         completedScale: parseInt(settings.fame_completed_scale || '70', 10),

@@ -13,8 +13,6 @@ export async function GET() {
       db.select().from(songRequests).orderBy(desc(songRequests.createdAt)).limit(100),
       db.select({
         id: fameSubmissions.id,
-        imageBase64: fameSubmissions.imageBase64,
-        polaroidBase64: fameSubmissions.polaroidBase64,
         imageUrl: fameSubmissions.imageUrl,
         polaroidUrl: fameSubmissions.polaroidUrl,
         caption: fameSubmissions.caption,
@@ -52,9 +50,9 @@ export async function GET() {
         ...item,
         followerVerified: clean ? verifiedSet.has(clean) : null,
       };
-      if ('imageUrl' in item || 'imageBase64' in item) {
-        mapped.imageSrc = item.imageUrl || item.imageBase64 || null;
-        mapped.polaroidSrc = item.polaroidUrl || item.polaroidBase64 || null;
+      if ('imageUrl' in item) {
+        mapped.imageSrc = item.imageUrl || null;
+        mapped.polaroidSrc = item.polaroidUrl || null;
       }
       return mapped;
     };
