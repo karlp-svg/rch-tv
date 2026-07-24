@@ -1,38 +1,11 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-const TARGET = process.env.DEPLOY_TARGET || 'single';
 const DJ_AUTH_USER = process.env.DJ_CONSOLE_USERNAME || 'dj';
 const DJ_AUTH_PASS = process.env.DJ_CONSOLE_PASSWORD;
 
-/**
- * How this works (single Vercel deployment):
- *
- *   /dj            → DJ Console (Basic Auth if password set) — always open
- *   /tv            → TV Display — always open
- *   /api/*         → API routes — always open
- *   /              → Landing page — only shows features if session is detected
- *   /dashboard
- *   /shoutout       → User pages — validated client-side via localStorage session
- *   /song-request     The middleware lets these through; the client component
- *   /make-famous       calls /api/session to verify and redirects to / if invalid
- *
- * The QR code URL format:
- *   https://your-app.vercel.app/?session=abc123
- *
- * The landing page reads the session from the URL and stores it in localStorage.
- * Internal navigation keeps the session via localStorage (not URL params).
- */
-const USER_PAGES = new Set([
-  '/',
-  '/dashboard',
-  '/shoutout',
-  '/song-request',
-  '/make-famous',
-]);
-
-function unauthorized(msg = 'Authentication required') {
-  return new NextResponse(msg, {
+function unauthorized() {
+  return new NextResponse('Authentication required', {
     status: 401,
     headers: {
       'WWW-Authenticate': 'Basic realm="DJ Console"',
@@ -60,18 +33,47 @@ function hasValidBasicAuth(req: NextRequest) {
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  const isStaticAsset =
+  // Static assets - always allow
+  if (
     pathname.startsWith('/_next') ||
     pathname.startsWith('/fonts') ||
     pathname === '/favicon.ico' ||
-    /\.[a-zA-Z0-9]{1,10}$/.test(pathname);
-
-  // Always allow static assets and API routes
-  if (pathname.startsWith('/api') || isStaticAsset) {
+    /\.[a-zA-Z0-9]+$/.test(pathname)
+  ) {
     return NextResponse.next();
   }
 
-  // --- DJ Console ---
+  // Public API routes - always allow (session validation happens in the route handler)
+  if (
+    pathname.startsWith('/api/session') ||
+    pathname.startsWith('/api/health') ||
+    pathname.startsWith('/api/followers/check') ||
+    pathname.startsWith('/api/fame') ||
+    pathname.startsWith('/api/shoutouts') ||
+    pathname.startsWith('/api/song-requests') ||
+    pathname.startsWith('/api/tv')
+  ) {
+    return NextResponse.next();
+  }
+
+  // Public session endpoint (needed for TV QR code) - allow through
+  if (pathname === '/api/admin/session') {
+    return NextResponse.next();
+  }
+
+  // Admin API routes - require Basic Auth
+  if (
+    pathname.startsWith('/api/admin') ||
+    pathname.startsWith('/api/settings') ||
+    pathname.startsWith('/api/social-posts')
+  ) {
+    if (!!DJ_AUTH_PASS && !hasValidBasicAuth(req)) {
+      return unauthorized();
+    }
+    return NextResponse.next();
+  }
+
+  // DJ Console pages - require Basic Auth
   if (pathname === '/dj' || pathname.startsWith('/dj/')) {
     if (!!DJ_AUTH_PASS && !hasValidBasicAuth(req)) {
       return unauthorized();
@@ -79,19 +81,8 @@ export function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  // --- TV Display ---
-  if (pathname === '/tv' || pathname.startsWith('/tv/')) {
-    return NextResponse.next();
-  }
-
-  // --- User pages (session-protected via client-side) ---
-  // Let them through — the client component handles session validation
-  // by calling /api/session?token=xxx and redirects to / if invalid.
-  // The landing page (/) shows a "Scan QR code" state if no session present.
-  if (USER_PAGES.has(pathname)) {
-    return NextResponse.next();
-  }
-
+  // Everything else (public pages, TV, etc.) - allow through
+  // Session validation happens client-side
   return NextResponse.next();
 }
 
