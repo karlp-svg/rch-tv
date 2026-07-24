@@ -15,7 +15,7 @@ export async function GET(request: Request) {
       return NextResponse.json({ found: false });
     }
 
-    const [row] = await db
+        const [row] = await db
       .select({ handle: instagramFollowers.handle })
       .from(instagramFollowers)
       .where(eq(instagramFollowers.handle, cleanHandle))

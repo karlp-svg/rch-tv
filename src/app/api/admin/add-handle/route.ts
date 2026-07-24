@@ -7,40 +7,37 @@ export const dynamic = 'force-dynamic';
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
+        const body = await request.json();
     const { handle } = body;
 
     if (!handle || typeof handle !== 'string') {
       return NextResponse.json({ error: 'Handle is required' }, { status: 400 });
     }
 
-    // Clean the handle (remove leading @ and trim and lowercase)
     const cleanHandle = handle.trim().replace(/^@+/, '').toLowerCase();
 
     if (!cleanHandle) {
       return NextResponse.json({ error: 'Valid handle is required' }, { status: 400 });
     }
 
-    // Insert handle into followers table (do nothing if already present)
     await db
       .insert(instagramFollowers)
       .values({ handle: cleanHandle })
       .onConflictDoNothing();
 
-    // Count matching requests across all three tables using case-insensitive matching
     const [sCountRes, songCountRes, fameCountRes] = await Promise.all([
       db
-        .select({ c: sql<number>`count(*)::int` })
+        .select({ c: sql<number>`count(*) as c` })
         .from(shoutouts)
         .where(sql`lower(${shoutouts.instagramHandle}) = ${cleanHandle}`),
 
       db
-        .select({ c: sql<number>`count(*)::int` })
+        .select({ c: sql<number>`count(*) as c` })
         .from(songRequests)
         .where(sql`lower(${songRequests.instagramHandle}) = ${cleanHandle}`),
 
       db
-        .select({ c: sql<number>`count(*)::int` })
+        .select({ c: sql<number>`count(*) as c` })
         .from(fameSubmissions)
         .where(sql`lower(${fameSubmissions.instagramHandle}) = ${cleanHandle}`),
     ]);

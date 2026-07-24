@@ -1,20 +1,13 @@
-import { db, ensureDatabaseCompatibility } from '@/db';
+import { db } from '@/db';
 import { shoutouts, songRequests, fameSubmissions } from '@/db/schema';
 import { NextResponse } from 'next/server';
 import { asc, eq, sql } from 'drizzle-orm';
 
 export const dynamic = 'force-dynamic';
 
-/**
- * Lightweight endpoint to check if TV content has changed.
- * Returns only metadata (no full content) to minimize bandwidth.
- * TV display polls this every 2 seconds, full /api/tv only when changed.
- */
 export async function GET() {
   try {
-    await ensureDatabaseCompatibility();
-
-    // Get only the most recent in_progress item's metadata
+    
     const [latest] = await db
       .select({
         id: shoutouts.id,
@@ -27,7 +20,6 @@ export async function GET() {
       .limit(1);
 
     if (!latest) {
-      // Check songs
       const [song] = await db
         .select({
           id: songRequests.id,
@@ -49,7 +41,6 @@ export async function GET() {
         return response;
       }
 
-      // Check fame
       const [fame] = await db
         .select({
           id: fameSubmissions.id,
@@ -71,7 +62,6 @@ export async function GET() {
         return response;
       }
 
-      // No content
       const response = NextResponse.json({
         hasContent: false,
         key: null,

@@ -1,4 +1,4 @@
-import { db, ensureDatabaseCompatibility } from '@/db';
+import { db } from '@/db';
 import { socialPosts } from '@/db/schema';
 import { NextResponse } from 'next/server';
 import { desc, eq } from 'drizzle-orm';
@@ -8,8 +8,7 @@ export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
-    await ensureDatabaseCompatibility();
-    const rows = await db.select({
+        const rows = await db.select({
       id: socialPosts.id,
       postType: socialPosts.postType,
       imageUrl: socialPosts.imageUrl,
@@ -20,7 +19,7 @@ export async function GET() {
       .limit(50);
 
     return NextResponse.json(
-      rows.map((p) => ({
+      rows.map((p: any) => ({
         id: p.id,
         postType: p.postType,
         imageSrc: p.imageUrl || null,
@@ -35,19 +34,16 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    await ensureDatabaseCompatibility();
-    const { postType, imageBase64 } = await request.json();
+        const { postType, imageBase64 } = await request.json();
 
     if (!postType || !imageBase64) {
       return NextResponse.json({ error: 'postType and imageBase64 are required' }, { status: 400 });
     }
 
-    // Save to R2 — image loads from Cloudflare CDN, zero egress
     const imageUrl = await saveBase64AsFile(imageBase64, `social-${postType}`);
 
     const inserted = await db.insert(socialPosts).values({
       postType,
-      imageBase64: null,
       imageUrl,
     }).returning();
 
@@ -64,14 +60,11 @@ export async function POST(request: Request) {
 
 export async function DELETE(request: Request) {
   try {
-    await ensureDatabaseCompatibility();
-    const { id } = await request.json();
+        const { id } = await request.json();
     if (!id) {
       return NextResponse.json({ error: 'Missing id' }, { status: 400 });
     }
-
     await db.delete(socialPosts).where(eq(socialPosts.id, id));
-
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Error deleting social post:', error);

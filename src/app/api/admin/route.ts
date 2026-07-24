@@ -1,4 +1,4 @@
-import { db, ensureDatabaseCompatibility } from '@/db';
+import { db } from '@/db';
 import { shoutouts, songRequests, fameSubmissions, instagramFollowers } from '@/db/schema';
 import { NextResponse } from 'next/server';
 import { desc, eq, sql, inArray, asc } from 'drizzle-orm';
@@ -7,8 +7,7 @@ export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
-    await ensureDatabaseCompatibility();
-    const [shoutoutList, songList, fameList] = await Promise.all([
+        const [shoutoutList, songList, fameList] = await Promise.all([
       db.select().from(shoutouts).orderBy(desc(shoutouts.createdAt)).limit(100),
       db.select().from(songRequests).orderBy(desc(songRequests.createdAt)).limit(100),
       db.select({
@@ -58,9 +57,9 @@ export async function GET() {
     };
 
     return NextResponse.json({
-      shoutouts: shoutoutList.map(mapItem),
-      songRequests: songList.map(mapItem),
-      fameSubmissions: fameList.map(mapItem),
+      shoutouts: shoutoutList.map((r: any) => mapItem(r)),
+      songRequests: songList.map((r: any) => mapItem(r)),
+      fameSubmissions: fameList.map((r: any) => mapItem(r)),
     });
   } catch (error) {
     console.error(error);
@@ -68,20 +67,19 @@ export async function GET() {
   }
 }
 
-const VALID_STATUSES = ['verifying', 'queued', 'in_progress', 'complete', 'rejected'] as const;
-type Status = typeof VALID_STATUSES[number];
+const VALID_STATUSES = ['verifying', 'queued', 'in_progress', 'complete', 'rejected'];
 
 async function countInProgress(): Promise<number> {
-  const [s, song, fame] = await Promise.all([
-    db.select({ c: sql<number>`count(*)::int` }).from(shoutouts).where(eq(shoutouts.status, 'in_progress')),
-    db.select({ c: sql<number>`count(*)::int` }).from(songRequests).where(eq(songRequests.status, 'in_progress')),
-    db.select({ c: sql<number>`count(*)::int` }).from(fameSubmissions).where(eq(fameSubmissions.status, 'in_progress')),
+    const [s, song, fame] = await Promise.all([
+    db.select({ c: sql<number>`count(*) as c` }).from(shoutouts).where(eq(shoutouts.status, 'in_progress')),
+    db.select({ c: sql<number>`count(*) as c` }).from(songRequests).where(eq(songRequests.status, 'in_progress')),
+    db.select({ c: sql<number>`count(*) as c` }).from(fameSubmissions).where(eq(fameSubmissions.status, 'in_progress')),
   ]);
   return (s[0]?.c || 0) + (song[0]?.c || 0) + (fame[0]?.c || 0);
 }
 
-export async function promoteNextQueued(): Promise<{ type: string; id: number } | null> {
-  const [queuedShoutouts, queuedSongs, queuedFame] = await Promise.all([
+async function promoteNextQueued(): Promise<{ type: string; id: number } | null> {
+    const [queuedShoutouts, queuedSongs, queuedFame] = await Promise.all([
     db.select({ id: shoutouts.id, createdAt: shoutouts.createdAt })
       .from(shoutouts).where(eq(shoutouts.status, 'queued')).orderBy(asc(shoutouts.createdAt)).limit(1),
     db.select({ id: songRequests.id, createdAt: songRequests.createdAt })
@@ -90,10 +88,10 @@ export async function promoteNextQueued(): Promise<{ type: string; id: number } 
       .from(fameSubmissions).where(eq(fameSubmissions.status, 'queued')).orderBy(asc(fameSubmissions.createdAt)).limit(1),
   ]);
 
-  const candidates = [
-    ...queuedShoutouts.map(r => ({ type: 'shoutout' as const, id: r.id, createdAt: r.createdAt })),
-    ...queuedSongs.map(r => ({ type: 'song' as const, id: r.id, createdAt: r.createdAt })),
-    ...queuedFame.map(r => ({ type: 'fame' as const, id: r.id, createdAt: r.createdAt })),
+  const candidates: { type: 'shoutout' | 'song' | 'fame'; id: number; createdAt: string }[] = [
+    ...queuedShoutouts.map((r: any) => ({ type: 'shoutout' as const, id: r.id, createdAt: r.createdAt })),
+    ...queuedSongs.map((r: any) => ({ type: 'song' as const, id: r.id, createdAt: r.createdAt })),
+    ...queuedFame.map((r: any) => ({ type: 'fame' as const, id: r.id, createdAt: r.createdAt })),
   ].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
 
   if (candidates.length === 0) return null;
@@ -115,8 +113,7 @@ export async function promoteNextQueued(): Promise<{ type: string; id: number } 
 
 export async function PATCH(request: Request) {
   try {
-    await ensureDatabaseCompatibility();
-    const body = await request.json();
+        const body = await request.json();
     const { type, id, status, action } = body;
 
     if (action === 'complete_and_promote') {
@@ -168,9 +165,7 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: 'Invalid status' }, { status: 400 });
     }
 
-    const typedStatus = status as Status;
-
-    if (typedStatus === 'in_progress') {
+    if (status === 'in_progress') {
       await Promise.all([
         db.update(shoutouts).set({ status: 'complete' }).where(eq(shoutouts.status, 'in_progress')),
         db.update(songRequests).set({ status: 'complete' }).where(eq(songRequests.status, 'in_progress')),
@@ -180,19 +175,19 @@ export async function PATCH(request: Request) {
 
     switch (type) {
       case 'shoutout':
-        await db.update(shoutouts).set({ status: typedStatus }).where(eq(shoutouts.id, id));
+        await db.update(shoutouts).set({ status }).where(eq(shoutouts.id, id));
         break;
       case 'song':
-        await db.update(songRequests).set({ status: typedStatus }).where(eq(songRequests.id, id));
+        await db.update(songRequests).set({ status }).where(eq(songRequests.id, id));
         break;
       case 'fame':
-        await db.update(fameSubmissions).set({ status: typedStatus }).where(eq(fameSubmissions.id, id));
+        await db.update(fameSubmissions).set({ status }).where(eq(fameSubmissions.id, id));
         break;
       default:
         return NextResponse.json({ error: 'Invalid type' }, { status: 400 });
     }
 
-    if (typedStatus === 'complete') {
+    if (status === 'complete') {
       await promoteNextQueued();
     }
 
@@ -205,8 +200,7 @@ export async function PATCH(request: Request) {
 
 export async function DELETE(request: Request) {
   try {
-    await ensureDatabaseCompatibility();
-    const { type, id, deleteAll } = await request.json();
+        const { type, id, deleteAll } = await request.json();
 
     if (deleteAll) {
       switch (type) {

@@ -20,7 +20,7 @@ const DEFAULTS: Record<string, string> = {
 
 export async function GET() {
   try {
-    const rows = await db.select().from(appSettings);
+        const rows = await db.select().from(appSettings);
     const settings: Record<string, string> = { ...DEFAULTS };
     for (const row of rows) {
       settings[row.key] = row.value;
@@ -34,7 +34,7 @@ export async function GET() {
 
 export async function PUT(request: Request) {
   try {
-    const body = await request.json();
+        const body = await request.json();
     for (const [key, value] of Object.entries(body)) {
       if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
         await db.insert(appSettings)

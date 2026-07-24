@@ -1,4 +1,4 @@
-import { db, ensureDatabaseCompatibility } from '@/db';
+import { db } from '@/db';
 import { shoutouts, songRequests, fameSubmissions, appSettings } from '@/db/schema';
 import { NextResponse } from 'next/server';
 import { asc, eq, sql } from 'drizzle-orm';
@@ -7,10 +7,8 @@ export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
-    await ensureDatabaseCompatibility();
-    const DEFAULT_DURATION = '60';
+        const DEFAULT_DURATION = '60';
 
-    // Only the single in_progress item is "on air". Queued items wait.
     const [activeShoutouts, activeSongs, activeFame, completedFame, settingsRows] = await Promise.all([
       db.select({
         id: shoutouts.id,
@@ -75,11 +73,10 @@ export async function GET() {
 
     const displayDuration = parseInt(settings.display_duration, 10) || 60;
 
-    // Should only be 0 or 1 in_progress item, but sort just in case
-    const live = [
-      ...activeShoutouts.map((item) => ({ ...item, type: 'shoutout' as const })),
-      ...activeSongs.map((item) => ({ ...item, type: 'song' as const })),
-      ...activeFame.map((item) => ({
+    const live: any[] = [
+      ...activeShoutouts.map((item: any) => ({ ...item, type: 'shoutout' as const })),
+      ...activeSongs.map((item: any) => ({ ...item, type: 'song' as const })),
+      ...activeFame.map((item: any) => ({
         id: item.id,
         polaroidSrc: item.polaroidUrl || null,
         imageSrc: item.imageUrl || null,
@@ -89,14 +86,14 @@ export async function GET() {
         createdAt: item.createdAt,
         type: 'fame' as const,
       })),
-    ].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+    ].sort((a: any, b: any) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
 
     const lastUpdate = live.length > 0 ? new Date(live[0].createdAt).getTime() : 0;
-    
+
     const response = NextResponse.json({
       current: live[0] || null,
       queue: live,
-      completedFame: completedFame.map((item) => ({
+      completedFame: completedFame.map((item: any) => ({
         id: item.id,
         polaroidSrc: item.polaroidUrl || null,
         imageSrc: item.imageUrl || null,
@@ -116,8 +113,6 @@ export async function GET() {
       lastUpdate,
     });
 
-    // Optimized cache headers for Cloudflare CDN
-    // 10 second cache matches client polling interval
     response.headers.set('Cache-Control', 'public, s-maxage=10, stale-while-revalidate=30');
     response.headers.set('CDN-Cache-Control', 'public, max-age=10');
     response.headers.set('Vary', 'Accept-Encoding');

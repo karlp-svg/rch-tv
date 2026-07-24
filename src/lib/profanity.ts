@@ -1,12 +1,14 @@
-import { Filter } from 'bad-words';
+/**
+ * Lightweight profanity filter - edge/Worker compatible.
+ * No Node.js dependencies - works in Cloudflare Workers, Vercel Edge, etc.
+ */
 
-const filter = new Filter();
-
-// Add extra terms specific to venues / party context
-filter.addWords(
+const BLOCKED_WORDS = [
+  'fuck', 'shit', 'ass', 'bitch', 'damn', 'cunt', 'dick', 'bastard',
+  'piss', 'slut', 'whore', 'cock', 'porn', 'sex',
   'stripper', 'nazi', 'kill', 'die', 'suicide', 'racist',
-  'slur', 'terrorist', 'bomb', 'rape'
-);
+  'terrorist', 'bomb', 'rape',
+];
 
 /**
  * Check if text contains profanity or unsafe content.
@@ -14,11 +16,12 @@ filter.addWords(
  */
 export function isClean(text: string | null | undefined): boolean {
   if (!text) return true;
-  try {
-    return !filter.isProfane(text);
-  } catch {
-    return true;
-  }
+  const lower = text.toLowerCase();
+  return !BLOCKED_WORDS.some(word => {
+    // Match whole word or as part of compound words
+    const regex = new RegExp(`\\b${word}\\b`, 'i');
+    return regex.test(lower);
+  });
 }
 
 /**

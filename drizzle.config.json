@@ -1,7 +1,8 @@
 {
-  "dialect": "postgresql",
+  "dialect": "sqlite",
   "schema": "./src/db/schema.ts",
+  "out": "./drizzle/migrations",
   "dbCredentials": {
-    "url": "postgresql://postgres:postgres@127.0.0.1:5432/app_db"
+    "url": "./data/d1.db"
   }
 }

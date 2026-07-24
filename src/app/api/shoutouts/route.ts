@@ -1,4 +1,4 @@
-import { db, ensureDatabaseCompatibility } from '@/db';
+import { db } from '@/db';
 import { shoutouts } from '@/db/schema';
 import { NextResponse } from 'next/server';
 import { desc } from 'drizzle-orm';
@@ -9,8 +9,7 @@ export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
-    await ensureDatabaseCompatibility();
-    const allShoutouts = await db.select().from(shoutouts).orderBy(desc(shoutouts.createdAt)).limit(20);
+        const allShoutouts = await db.select().from(shoutouts).orderBy(desc(shoutouts.createdAt)).limit(20);
     return NextResponse.json(allShoutouts);
   } catch (error) {
     return NextResponse.json({ error: 'Failed to fetch shoutouts' }, { status: 500 });
@@ -19,12 +18,11 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    await ensureDatabaseCompatibility();
-    const { message, fromName, instagramHandle, showHandleOnTV, sessionToken } = await request.json();
+        const { message, fromName, instagramHandle, showHandleOnTV, sessionToken } = await request.json();
     if (!(await validatePublicSession(sessionToken))) {
       return NextResponse.json({ error: 'Session expired. Please scan the latest QR code.' }, { status: 403 });
     }
-    
+
     if (!message || message.length > 160) {
       return NextResponse.json({ error: 'Invalid message' }, { status: 400 });
     }
@@ -35,7 +33,7 @@ export async function POST(request: Request) {
       message,
       fromName: fromName || null,
       instagramHandle: instagramHandle ? instagramHandle.replace(/^@+/, '').trim().slice(0, 100) : null,
-      showHandleOnTv: !!showHandleOnTV,
+      showHandleOnTv: !!showHandleOnTV ? 1 : 0,
       status: autoRejected ? 'rejected' : 'verifying',
     }).returning();
 
