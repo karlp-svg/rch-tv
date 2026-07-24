@@ -240,7 +240,7 @@ export default function MakeFamousPage() {
     const savedHandle = localStorage.getItem('rch_tv_insta_handle') || '';
     setInstagramHandle(savedHandle);
     fetchSubmissions();
-    const interval = setInterval(fetchSubmissions, 9000);
+    const interval = setInterval(fetchSubmissions, 15000);
     return () => clearInterval(interval);
   }, []);
 

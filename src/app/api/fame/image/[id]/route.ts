@@ -12,7 +12,7 @@ export async function GET(
     const { searchParams } = new URL(request.url);
     const variant = searchParams.get('v');
 
-        const [row] = await db.select({
+    const [row] = await db.select({
       imageUrl: fameSubmissions.imageUrl,
       polaroidUrl: fameSubmissions.polaroidUrl,
     })
@@ -26,6 +26,30 @@ export async function GET(
 
     const url = variant === 'polaroid' && row.polaroidUrl ? row.polaroidUrl : row.imageUrl;
     if (url) {
+      // Proxy the image through the server to avoid CORS issues with R2
+      // This is needed for canvas operations in the End of Night modal
+      try {
+        const imageRes = await fetch(url, {
+          headers: {
+            'Accept': 'image/*',
+          },
+        });
+        if (imageRes.ok) {
+          const contentType = imageRes.headers.get('content-type') || 'image/jpeg';
+          const buffer = await imageRes.arrayBuffer();
+          return new NextResponse(buffer, {
+            status: 200,
+            headers: {
+              'Content-Type': contentType,
+              'Cache-Control': 'public, max-age=86400, immutable',
+              'Access-Control-Allow-Origin': '*',
+            },
+          });
+        }
+      } catch {
+        // If proxying fails, fall through to redirect
+      }
+
       return NextResponse.redirect(url, 302);
     }
 

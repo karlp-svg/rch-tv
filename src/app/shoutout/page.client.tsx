@@ -54,7 +54,7 @@ export default function ShoutoutPage() {
     const saved = localStorage.getItem('rch_tv_insta_handle') || '';
     setInstagramHandle(saved);
     fetchShoutouts();
-    const interval = setInterval(fetchShoutouts, 7000);
+    const interval = setInterval(fetchShoutouts, 15000);
     return () => clearInterval(interval);
   }, []);
 

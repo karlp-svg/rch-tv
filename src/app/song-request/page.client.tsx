@@ -68,7 +68,7 @@ export default function SongRequestPage() {
     const saved = localStorage.getItem('rch_tv_insta_handle') || '';
     setInstagramHandle(saved);
     fetchRequests();
-    const interval = setInterval(fetchRequests, 8000);
+    const interval = setInterval(fetchRequests, 15000);
     return () => clearInterval(interval);
   }, []);
 

@@ -112,7 +112,7 @@ export default function TVPage() {
     };
 
     checkForChanges();
-    const poll = setInterval(checkForChanges, 2000); // Check every 2 seconds
+    const poll = setInterval(checkForChanges, 15000); // Check every 15 seconds
     return () => clearInterval(poll);
   }, []);
 

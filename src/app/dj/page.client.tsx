@@ -131,8 +131,8 @@ export default function DJAdminPage() {
     fetchSettings();
     fetchTVCurrent();
     fetchPublicSession();
-    const interval = setInterval(fetchData, 5000);
-    const tvInterval = setInterval(fetchTVCurrent, 3000);
+    const interval = setInterval(fetchData, 15000);
+    const tvInterval = setInterval(fetchTVCurrent, 15000);
     return () => { clearInterval(interval); clearInterval(tvInterval); };
   }, []);
 
@@ -301,6 +301,7 @@ export default function DJAdminPage() {
           message: manualShoutout.message.trim(),
           fromName: manualShoutout.fromName.trim() || undefined,
           instagramHandle: manualShoutout.instagramHandle.trim().replace(/^@+/, '') || undefined,
+          sessionToken: 'dj-manual', // DJ manual entries skip session check
         }),
       });
       setManualShoutout({ message: '', fromName: '', instagramHandle: '' });
@@ -321,6 +322,7 @@ export default function DJAdminPage() {
           anyTitle: manualSong.anyTitle,
           requesterName: manualSong.requesterName.trim() || undefined,
           instagramHandle: manualSong.instagramHandle.trim().replace(/^@+/, '') || undefined,
+          sessionToken: 'dj-manual', // DJ manual entries skip session check
         }),
       });
       setManualSong({ artist: '', title: '', anyTitle: false, requesterName: '', instagramHandle: '' });
