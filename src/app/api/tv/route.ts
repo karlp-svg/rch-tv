@@ -74,15 +74,15 @@ export async function GET() {
     const displayDuration = parseInt(settings.display_duration, 10) || 60;
 
     const live: any[] = [
-      ...activeShoutouts.map((item: any) => ({ ...item, type: 'shoutout' as const })),
-      ...activeSongs.map((item: any) => ({ ...item, type: 'song' as const })),
+      ...activeShoutouts.map((item: any) => ({ ...item, type: 'shoutout' as const, showHandleOnTv: !!item.showHandleOnTv })),
+      ...activeSongs.map((item: any) => ({ ...item, type: 'song' as const, showHandleOnTv: !!item.showHandleOnTv })),
       ...activeFame.map((item: any) => ({
         id: item.id,
         polaroidSrc: item.polaroidUrl || null,
         imageSrc: item.imageUrl || null,
         caption: item.caption,
         instagramHandle: item.instagramHandle,
-        showHandleOnTv: item.showHandleOnTv,
+        showHandleOnTv: !!item.showHandleOnTv,
         createdAt: item.createdAt,
         type: 'fame' as const,
       })),

@@ -47,6 +47,7 @@ export async function GET() {
       const clean = item.instagramHandle ? item.instagramHandle.toLowerCase().replace(/^@+/, '').trim() : null;
       const mapped: any = {
         ...item,
+        showHandleOnTv: !!item.showHandleOnTv,
         followerVerified: clean ? verifiedSet.has(clean) : null,
       };
       if ('imageUrl' in item) {
