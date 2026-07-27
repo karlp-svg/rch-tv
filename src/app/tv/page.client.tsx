@@ -245,9 +245,10 @@ function FameView({ item, completedFame, fameSettings, hideBackground }: { item:
   const completedSize = Math.round(photoSize * completedScale);
 
   const total = backgroundPhotos.length;
-  // Calculate the max pixel offset based on viewport
-  // spreadPercent 0 = no offset (stacked on center), 1 = max offset (~40vw each side)
-  const maxPixelOffset = spreadPercent * 40; // in vw units
+  // spreadPercent 0 = no offset (stacked on center), 1 = max offset
+  // The pixel offset scales proportionally - at 100% spread the last photo
+  // is pushed 800px from center (covers most of a 1920px screen)
+  const maxPixelOffset = spreadPercent * 800;
   
   const getStackPosition = (id: number, index: number) => {
     const seed = id * 7919;
