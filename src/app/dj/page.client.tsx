@@ -113,8 +113,8 @@ export default function DJAdminPage() {
   const [fameTitleOffset, setFameTitleOffset] = useState(22);
   const [fameDisplayOffset, setFameDisplayOffset] = useState(0);
   const [fameCompletedFade, setFameCompletedFade] = useState(70);
-  const [showFameControls, setShowFameControls] = useState(false);
   const [showEndOfNight, setShowEndOfNight] = useState(false);
+  const [showOptions, setShowOptions] = useState(false);
   // Manual entry modals
   const [showManualShoutoutModal, setShowManualShoutoutModal] = useState(false);
   const [showManualSongModal, setShowManualSongModal] = useState(false);
@@ -550,69 +550,84 @@ export default function DJAdminPage() {
           {/* Left title column */}
           <aside className="rounded-3xl border border-white/10 bg-zinc-900/70 p-5 min-h-[210px] flex flex-col justify-between">
             <div>
-              <div className="flex items-center gap-3 mb-4">
-                <div className="text-4xl">🎛️</div>
-                <div>
-                  <h1 className="text-3xl font-bold tracking-tighter leading-none">DJ<br />Console</h1>
-                  <div className="mt-3 text-[10px] text-zinc-500 font-mono tracking-widest uppercase leading-relaxed">RCH TV<br />Management</div>
+              <div className="mb-4">
+                <div
+                  className="text-4xl sm:text-5xl font-normal tracking-[0.08em] text-white leading-tight"
+                  style={{ fontFamily: "'Vortax', 'Orbitron', 'Audiowide', system-ui, sans-serif" }}
+                >
+                  RCH  TV
                 </div>
+                <div className="text-sm text-zinc-400 font-semibold tracking-wide mt-1">CONSOLE</div>
               </div>
               <p className="text-zinc-500 text-xs leading-relaxed">Approve, reject and mark requests as they hit the screen</p>
             </div>
           </aside>
 
-          {/* Right controls grid */}
+          {/* Right controls grid — always visible: On Air Now + collapse toggle for Options */}
           <section className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-4 gap-3 items-stretch">
-            {/* Public Session */}
-            <div className="bg-zinc-900 border border-white/10 rounded-2xl p-3.5 flex flex-col justify-between min-h-[132px]">
-              <div>
-                <div className="text-[10px] text-zinc-400 uppercase font-mono">Public Session</div>
-                <div className="mt-1 text-sm font-bold text-indigo-300 font-mono">{publicSession ? `${publicSession.slice(0, 6)}…` : 'Loading…'}</div>
+            {/* On Air Now (always visible, prominent) */}
+            <div className="md:col-span-2 2xl:col-span-2 bg-zinc-900/80 border border-white/10 rounded-2xl p-4 flex flex-col justify-between min-h-[132px]">
+              <div className="flex items-center justify-between">
+                <div className="text-[10px] text-zinc-400 uppercase font-mono tracking-wider flex items-center gap-2">
+                  <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
+                  On Air Now
+                </div>
+                {currentAction && (
+                  <div className={`text-[9px] px-2 py-0.5 rounded-full font-semibold ${
+                    currentAction.type === 'shoutout' ? 'bg-purple-500/20 text-purple-300' :
+                    currentAction.type === 'song' ? 'bg-amber-500/20 text-amber-300' :
+                    'bg-pink-500/20 text-pink-300'
+                  }`}>
+                    {currentAction.type === 'shoutout' ? '📺 SHOUTOUT' : currentAction.type === 'song' ? '🎵 REQUEST' : '📸 PHOTO'}
+                  </div>
+                )}
               </div>
-              <div className="mt-4 grid grid-cols-2 gap-2">
-                <button
-                  onClick={regeneratePublicSession}
-                  disabled={sessionLoading}
-                  className="px-3 py-2 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/20 text-indigo-200 text-xs font-semibold rounded-xl transition disabled:opacity-50"
-                >
-                  {sessionLoading ? 'Creating…' : 'New Session'}
-                </button>
-                <button
-                  onClick={() => setShowSessionModal(true)}
-                  className="px-3 py-2 bg-indigo-500/15 hover:bg-indigo-500/25 border border-indigo-500/30 text-indigo-300 text-xs font-semibold rounded-xl transition flex items-center justify-center gap-1.5"
-                >
-                  <QrCode className="w-3.5 h-3.5" /> QR
-                </button>
-              </div>
+              {currentAction ? (
+                <div className="mt-2 flex flex-col gap-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="text-sm text-white font-semibold truncate">
+                      {currentAction.type === 'shoutout' && `"${(currentAction as any).message}"`}
+                      {currentAction.type === 'song' && (
+                        (currentAction as any).anyTitle
+                          ? `Anything – ${(currentAction as any).artist}`
+                          : `${(currentAction as any).title} – ${(currentAction as any).artist}`
+                      )}
+                      {currentAction.type === 'fame' && `${(currentAction as any).caption || 'Photo on Wall of Fame'}`}
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <div className={`text-sm font-mono font-bold ${countdown <= 10 ? 'text-red-400' : 'text-emerald-400'}`}>
+                        {Math.floor(countdown / 60)}:{String(countdown % 60).padStart(2, '0')}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="w-full h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-gradient-to-r from-purple-500 to-pink-500 transition-all duration-1000 ease-linear rounded-full"
+                      style={{ width: `${Math.max(0, (countdown / displayDuration) * 100)}%` }}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="text-[10px] text-zinc-500">{tvQueueLength > 1 ? `+${tvQueueLength - 1} more queued` : 'Nothing queued'}</div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={completeCurrentAction}
+                        className="text-[10px] px-3 py-1.5 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/30 rounded-full font-semibold flex items-center gap-1 transition"
+                      >
+                        <CheckCircle2 className="w-3 h-3" /> Complete & Next
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex-1 flex items-center justify-center text-xs text-zinc-500 text-center py-2">Nothing on TV yet — approve a request to go live</div>
+              )}
             </div>
 
-            {/* IG Followers */}
-            <div className="bg-zinc-900 border border-white/10 rounded-2xl p-3.5 flex flex-col justify-between min-h-[132px]">
-              <div>
-                <div className="text-[10px] text-zinc-400 uppercase font-mono">IG Followers DB</div>
-                <div className="mt-1 text-sm font-bold text-pink-400">{followersCount.toLocaleString()} handles</div>
-              </div>
-              <div className="mt-4 grid grid-cols-2 gap-2">
-                <button
-                  onClick={() => setShowUploadModal(true)}
-                  className="px-3 py-2 bg-pink-500/15 hover:bg-pink-500/25 border border-pink-500/30 text-pink-300 text-xs font-semibold rounded-xl transition flex items-center justify-center gap-1.5"
-                >
-                  <AtSign className="w-3.5 h-3.5" /> Upload
-                </button>
-                <button
-                  onClick={() => setShowAddHandleModal(true)}
-                  className="px-3 py-2 bg-green-500/15 hover:bg-green-500/25 border border-green-500/30 text-green-300 text-xs font-semibold rounded-xl transition flex items-center justify-center gap-1.5"
-                >
-                  <AtSign className="w-3.5 h-3.5" /> Add
-                </button>
-              </div>
-            </div>
-
-            {/* TV Display Settings */}
+            {/* TV Display (always visible) */}
             <div className="bg-zinc-900 border border-white/10 rounded-2xl p-3.5 flex flex-col justify-between min-h-[132px]">
               <div className="flex items-center justify-between gap-2">
                 <div>
-                  <div className="text-[10px] text-zinc-400 uppercase font-mono">TV Display</div>
+                  <div className="text-[10px] text-zinc-400 uppercase font-mono">📺 TV Display</div>
                   <div className="mt-1 text-xs font-bold text-purple-400">{displayDuration >= 60 ? `${displayDuration / 60}m` : `${displayDuration}s`} per item</div>
                 </div>
                 <button
@@ -622,7 +637,7 @@ export default function DJAdminPage() {
                   <ExternalLink className="w-3 h-3" /> TV Link
                 </button>
               </div>
-              <div className="mt-3 flex items-center gap-1">
+              <div className="mt-2 flex items-center gap-1">
                 {[
                   { secs: 30, label: '30s' },
                   { secs: 60, label: '1m' },
@@ -642,8 +657,8 @@ export default function DJAdminPage() {
                   </button>
                 ))}
               </div>
-              <div className="mt-3 flex items-center justify-between border-t border-white/5 pt-2">
-                <div className="text-[10px] text-zinc-400 uppercase font-mono">Hide BG</div>
+              <div className="flex items-center justify-between border-t border-white/5 pt-2">
+                <div className="text-[10px] text-zinc-400 uppercase font-mono">Hide Background</div>
                 <button
                   onClick={() => updateHideBackground(!hideBackground)}
                   className={`relative w-9 h-5 rounded-full transition-colors ${hideBackground ? 'bg-purple-500' : 'bg-zinc-700'}`}
@@ -653,220 +668,153 @@ export default function DJAdminPage() {
               </div>
             </div>
 
-            {/* On Air Now */}
-            <div className="bg-zinc-900 border border-white/10 rounded-2xl p-3.5 flex flex-col justify-between min-h-[132px]">
-              <div className="text-[10px] text-zinc-400 uppercase font-mono">On Air Now</div>
-              {currentAction ? (
-                <div className="mt-2 flex flex-col gap-2">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-semibold ${
-                      currentAction.type === 'shoutout' ? 'bg-purple-500/20 text-purple-300' :
-                      currentAction.type === 'song' ? 'bg-amber-500/20 text-amber-300' :
-                      'bg-pink-500/20 text-pink-300'
-                    }`}>
-                      {currentAction.type === 'shoutout' ? '📺 SHOUTOUT' : currentAction.type === 'song' ? '🎵 REQUEST' : '📸 PHOTO'}
-                    </span>
-                    <div className="flex items-center gap-1.5">
-                      <div className={`text-xs font-mono font-bold ${countdown <= 10 ? 'text-red-400' : 'text-emerald-400'}`}>
-                        {Math.floor(countdown / 60)}:{String(countdown % 60).padStart(2, '0')}
+            {/* Collapsible OPTIONS section */}
+            <div className="md:col-span-2 2xl:col-span-4 bg-zinc-900/50 border border-white/10 rounded-2xl overflow-hidden">
+              <button
+                onClick={() => setShowOptions(!showOptions)}
+                className="w-full px-4 py-3 flex items-center justify-between text-xs text-zinc-400 uppercase font-mono hover:bg-white/5 transition"
+              >
+                <span className="flex items-center gap-2">
+                  <span className="text-zinc-500">⚙️</span>
+                  Options &amp; Settings
+                </span>
+                <div className="flex items-center gap-3">
+                  <span className="text-[9px] text-zinc-500">
+                    {showOptions ? 'collapse' : `${followersCount.toLocaleString()} followers · ${displayDuration >= 60 ? `${displayDuration / 60}m` : `${displayDuration}s`} per item`}
+                  </span>
+                  <span className={`text-zinc-500 transition-transform ${showOptions ? 'rotate-180' : ''}`}>▼</span>
+                </div>
+              </button>
+
+              {showOptions && (
+                <div className="border-t border-white/5 p-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-4">
+                    {/* Session */}
+                    <div className="bg-zinc-900/80 border border-white/10 rounded-2xl p-3.5 flex flex-col gap-3">
+                      <div className="text-[10px] text-zinc-400 uppercase font-mono flex items-center justify-between">
+                        <span>🔑 Session</span>
+                        <span className="text-xs font-bold text-indigo-300 font-mono">{publicSession ? `${publicSession.slice(0, 8)}…` : 'Loading…'}</span>
                       </div>
-                      <div className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse"></div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          onClick={regeneratePublicSession}
+                          disabled={sessionLoading}
+                          className="py-2 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/20 text-indigo-200 text-[10px] font-semibold rounded-xl transition disabled:opacity-50"
+                        >
+                          {sessionLoading ? '…' : 'New Session'}
+                        </button>
+                        <button
+                          onClick={() => setShowSessionModal(true)}
+                          className="py-2 bg-indigo-500/15 hover:bg-indigo-500/25 border border-indigo-500/30 text-indigo-300 text-[10px] font-semibold rounded-xl transition flex items-center justify-center gap-1"
+                        >
+                          <QrCode className="w-3 h-3" /> QR Code
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                  <div className="text-xs text-white truncate">
-                    {currentAction.type === 'shoutout' && `"${(currentAction as any).message?.slice(0, 35)}"`}
-                    {currentAction.type === 'song' && ((currentAction as any).anyTitle ? `Anything – ${(currentAction as any).artist}` : `${(currentAction as any).title} – ${(currentAction as any).artist}`)}
-                    {currentAction.type === 'fame' && `${(currentAction as any).caption || 'Photo'}`}
-                  </div>
-                  <div className="w-full h-1 bg-zinc-800 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-purple-500 transition-all duration-1000 ease-linear"
-                      style={{ width: `${Math.max(0, (countdown / displayDuration) * 100)}%` }}
-                    />
-                  </div>
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="text-[10px] text-zinc-500">{tvQueueLength > 1 ? `+${tvQueueLength - 1} queued` : 'Last in queue'}</div>
-                    <button
-                      onClick={completeCurrentAction}
-                      className="text-[10px] px-2 py-1 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/30 rounded-full font-semibold flex items-center gap-1"
-                    >
-                      <CheckCircle2 className="w-3 h-3" /> Complete
-                    </button>
+
+                    {/* End of Night (separate card) */}
+                    <div className="bg-zinc-900/80 border border-white/10 rounded-2xl p-3.5 flex flex-col items-center justify-center gap-2 min-h-[100px]">
+                      <button
+                        onClick={() => setShowEndOfNight(true)}
+                        className="w-full py-3 bg-indigo-500/15 hover:bg-indigo-500/25 border border-indigo-500/30 text-indigo-300 text-xs font-semibold rounded-2xl transition flex items-center justify-center gap-2"
+                      >
+                        <Moon className="w-4 h-4" /> End of Night
+                      </button>
+                      <div className="text-[9px] text-zinc-500 text-center">Generate social posts from<br />tonight's highlights</div>
+                    </div>
+
+                    {/* IG Followers (stacked vertically) */}
+                    <div className="bg-zinc-900/80 border border-white/10 rounded-2xl p-3.5 flex flex-col gap-2.5">
+                      <div className="text-[10px] text-zinc-400 uppercase font-mono flex items-center justify-between">
+                        <span>👥 IG Followers DB</span>
+                        <span className="text-[11px] font-bold text-pink-400">{followersCount.toLocaleString()}</span>
+                      </div>
+                      <button
+                        onClick={() => setShowUploadModal(true)}
+                        className="w-full py-2 bg-pink-500/15 hover:bg-pink-500/25 border border-pink-500/30 text-pink-300 text-[10px] font-semibold rounded-xl transition flex items-center justify-center gap-1.5"
+                      >
+                        <AtSign className="w-3 h-3" /> Upload Dump
+                      </button>
+                      <button
+                        onClick={() => setShowAddHandleModal(true)}
+                        className="w-full py-2 bg-green-500/15 hover:bg-green-500/25 border border-green-500/30 text-green-300 text-[10px] font-semibold rounded-xl transition flex items-center justify-center gap-1.5"
+                      >
+                        <AtSign className="w-3 h-3" /> Add Handle Manually
+                      </button>
+                    </div>
+
+                    {/* Wall of Fame Settings (wider - spans 2 columns) */}
+                    <div className="bg-zinc-900/80 border border-white/10 rounded-2xl p-3.5 md:col-span-2 2xl:col-span-2">
+                      <div className="text-[10px] text-zinc-400 uppercase font-mono mb-3">📸 Wall of Fame</div>
+                      <div className="flex flex-col gap-2.5">
+                        <div className="flex items-center gap-3">
+                          <label className="text-[9px] text-zinc-500 w-20 shrink-0">Photo Size</label>
+                          <input type="range" min={20} max={70} value={famePhotoSize}
+                            onChange={(e) => setFamePhotoSize(parseInt(e.target.value, 10))}
+                            onMouseUp={async () => { await fetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fame_photo_size: String(famePhotoSize) }) }); }}
+                            onTouchEnd={async () => { await fetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fame_photo_size: String(famePhotoSize) }) }); }}
+                            className="flex-1 accent-pink-500 h-6" />
+                          <span className="text-[10px] text-pink-400 font-mono w-8 text-right">{famePhotoSize}%</span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <label className="text-[9px] text-zinc-500 w-20 shrink-0">Completed Sz</label>
+                          <input type="range" min={20} max={100} value={fameCompletedScale}
+                            onChange={(e) => setFameCompletedScale(parseInt(e.target.value, 10))}
+                            onMouseUp={async () => { await fetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fame_completed_scale: String(fameCompletedScale) }) }); }}
+                            onTouchEnd={async () => { await fetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fame_completed_scale: String(fameCompletedScale) }) }); }}
+                            className="flex-1 accent-pink-500 h-6" />
+                          <span className="text-[10px] text-pink-400 font-mono w-8 text-right">{fameCompletedScale}%</span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <label className="text-[9px] text-zinc-500 w-20 shrink-0">Rotation</label>
+                          <input type="range" min={0} max={45} value={fameRotation}
+                            onChange={(e) => setFameRotation(parseInt(e.target.value, 10))}
+                            onMouseUp={async () => { await fetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fame_rotation: String(fameRotation) }) }); }}
+                            onTouchEnd={async () => { await fetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fame_rotation: String(fameRotation) }) }); }}
+                            className="flex-1 accent-pink-500 h-6" />
+                          <span className="text-[10px] text-pink-400 font-mono w-8 text-right">±{fameRotation}°</span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <label className="text-[9px] text-zinc-500 w-20 shrink-0">Spread</label>
+                          <input type="range" min={0} max={300} step={10} value={fameSpread}
+                            onChange={(e) => setFameSpread(parseInt(e.target.value, 10))}
+                            onMouseUp={async () => { await fetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fame_spread: String(fameSpread) }) }); }}
+                            onTouchEnd={async () => { await fetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fame_spread: String(fameSpread) }) }); }}
+                            className="flex-1 accent-pink-500 h-6" />
+                          <span className="text-[10px] text-pink-400 font-mono w-8 text-right">{fameSpread}px</span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <label className="text-[9px] text-zinc-500 w-20 shrink-0">Titles Y</label>
+                          <input type="range" min={0} max={70} step={1} value={fameTitleOffset}
+                            onChange={(e) => setFameTitleOffset(parseInt(e.target.value, 10))}
+                            onMouseUp={async () => { await fetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fame_title_offset: String(fameTitleOffset) }) }); }}
+                            onTouchEnd={async () => { await fetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fame_title_offset: String(fameTitleOffset) }) }); }}
+                            className="flex-1 accent-pink-500 h-6" />
+                          <span className="text-[10px] text-pink-400 font-mono w-8 text-right">{fameTitleOffset}%</span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <label className="text-[9px] text-zinc-500 w-20 shrink-0">Display Y</label>
+                          <input type="range" min={-300} max={300} step={10} value={fameDisplayOffset}
+                            onChange={(e) => setFameDisplayOffset(parseInt(e.target.value, 10))}
+                            onMouseUp={async () => { await fetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fame_display_offset: String(fameDisplayOffset) }) }); }}
+                            onTouchEnd={async () => { await fetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fame_display_offset: String(fameDisplayOffset) }) }); }}
+                            className="flex-1 accent-pink-500 h-6" />
+                          <span className="text-[10px] text-pink-400 font-mono w-8 text-right">{fameDisplayOffset}px</span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <label className="text-[9px] text-zinc-500 w-20 shrink-0">Fade</label>
+                          <input type="range" min={0} max={100} step={5} value={fameCompletedFade}
+                            onChange={(e) => setFameCompletedFade(parseInt(e.target.value, 10))}
+                            onMouseUp={async () => { await fetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fame_completed_fade: String(fameCompletedFade) }) }); }}
+                            onTouchEnd={async () => { await fetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fame_completed_fade: String(fameCompletedFade) }) }); }}
+                            className="flex-1 accent-pink-500 h-6" />
+                          <span className="text-[10px] text-pink-400 font-mono w-8 text-right">{fameCompletedFade}%</span>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
-              ) : (
-                <div className="flex-1 flex items-center justify-center text-[10px] text-zinc-500 text-center py-2">Nothing on TV yet —<br />approve a request to go live</div>
               )}
-            </div>
-
-            {/* Secondary row */}
-            <div className="md:col-start-2 2xl:col-start-2">
-              <button
-                onClick={() => setShowEndOfNight(true)}
-                className="w-full px-3 py-3 bg-indigo-500/15 hover:bg-indigo-500/25 border border-indigo-500/30 text-indigo-300 text-xs font-semibold rounded-2xl transition flex items-center justify-center gap-1.5"
-              >
-                <Moon className="w-3.5 h-3.5" /> End of Night
-              </button>
-            </div>
-
-            <div className="md:col-span-2 2xl:col-span-2">
-              <div className="bg-zinc-900 border border-white/10 rounded-2xl overflow-hidden w-full">
-                <button
-                  onClick={() => setShowFameControls(!showFameControls)}
-                  className="w-full p-3.5 flex items-center justify-between text-[10px] text-zinc-400 uppercase font-mono hover:bg-white/5 transition"
-                >
-                  <span>📸 Wall of Fame Settings</span>
-                  <span className="text-zinc-600">{showFameControls ? '▲' : '▼'}</span>
-                </button>
-
-                {showFameControls && (
-                  <div className="px-3.5 pb-3.5 flex flex-col gap-3 border-t border-white/5 pt-3">
-                    {/* In-progress photo size */}
-                    <div className="flex items-center gap-3">
-                      <label className="text-[10px] text-zinc-500 w-24 shrink-0">Photo Size</label>
-                      <input
-                        type="range"
-                        min={20}
-                        max={70}
-                        value={famePhotoSize}
-                        onChange={(e) => setFamePhotoSize(parseInt(e.target.value, 10))}
-                        onMouseUp={async () => {
-                          await fetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fame_photo_size: String(famePhotoSize) }) });
-                        }}
-                        onTouchEnd={async () => {
-                          await fetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fame_photo_size: String(famePhotoSize) }) });
-                        }}
-                        className="flex-1 accent-pink-500"
-                      />
-                      <span className="text-xs text-pink-400 font-mono w-10 text-right">{famePhotoSize}%</span>
-                    </div>
-
-                    {/* Completed photos scale */}
-                    <div className="flex items-center gap-3">
-                      <label className="text-[10px] text-zinc-500 w-24 shrink-0">Completed Size</label>
-                      <input
-                        type="range"
-                        min={20}
-                        max={100}
-                        value={fameCompletedScale}
-                        onChange={(e) => setFameCompletedScale(parseInt(e.target.value, 10))}
-                        onMouseUp={async () => {
-                          await fetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fame_completed_scale: String(fameCompletedScale) }) });
-                        }}
-                        onTouchEnd={async () => {
-                          await fetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fame_completed_scale: String(fameCompletedScale) }) });
-                        }}
-                        className="flex-1 accent-pink-500"
-                      />
-                      <span className="text-xs text-pink-400 font-mono w-10 text-right">{fameCompletedScale}%</span>
-                    </div>
-
-                    {/* Rotation */}
-                    <div className="flex items-center gap-3">
-                      <label className="text-[10px] text-zinc-500 w-24 shrink-0">Rotation</label>
-                      <input
-                        type="range"
-                        min={0}
-                        max={45}
-                        value={fameRotation}
-                        onChange={(e) => setFameRotation(parseInt(e.target.value, 10))}
-                        onMouseUp={async () => {
-                          await fetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fame_rotation: String(fameRotation) }) });
-                        }}
-                        onTouchEnd={async () => {
-                          await fetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fame_rotation: String(fameRotation) }) });
-                        }}
-                        className="flex-1 accent-pink-500"
-                      />
-                      <span className="text-xs text-pink-400 font-mono w-10 text-right">±{fameRotation}°</span>
-                    </div>
-
-                    {/* Spread Left/Right */}
-                    <div className="flex items-center gap-3">
-                      <label className="text-[10px] text-zinc-500 w-24 shrink-0">Spread (px)</label>
-                      <input
-                        type="range"
-                        min={0}
-                        max={300}
-                        step={10}
-                        value={fameSpread}
-                        onChange={(e) => setFameSpread(parseInt(e.target.value, 10))}
-                        onMouseUp={async () => {
-                          await fetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fame_spread: String(fameSpread) }) });
-                        }}
-                        onTouchEnd={async () => {
-                          await fetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fame_spread: String(fameSpread) }) });
-                        }}
-                        className="flex-1 accent-pink-500"
-                      />
-                      <span className="text-xs text-pink-400 font-mono w-10 text-right">{fameSpread}px</span>
-                    </div>
-
-                    {/* Title Y Offset */}
-                    <div className="flex items-center gap-3 pt-2 border-t border-white/5">
-                      <label className="text-[10px] text-zinc-500 w-24 shrink-0">Titles Y</label>
-                      <input
-                        type="range"
-                        min={0}
-                        max={70}
-                        step={1}
-                        value={fameTitleOffset}
-                        onChange={(e) => setFameTitleOffset(parseInt(e.target.value, 10))}
-                        onMouseUp={async () => {
-                          await fetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fame_title_offset: String(fameTitleOffset) }) });
-                        }}
-                        onTouchEnd={async () => {
-                          await fetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fame_title_offset: String(fameTitleOffset) }) });
-                        }}
-                        className="flex-1 accent-pink-500"
-                      />
-                      <span className="text-xs text-pink-400 font-mono w-10 text-right">{fameTitleOffset}%</span>
-                    </div>
-
-                    {/* Display Y Offset (whole layout) */}
-                    <div className="flex items-center gap-3">
-                      <label className="text-[10px] text-zinc-500 w-24 shrink-0">Display Y</label>
-                      <input
-                        type="range"
-                        min={-300}
-                        max={300}
-                        step={10}
-                        value={fameDisplayOffset}
-                        onChange={(e) => setFameDisplayOffset(parseInt(e.target.value, 10))}
-                        onMouseUp={async () => {
-                          await fetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fame_display_offset: String(fameDisplayOffset) }) });
-                        }}
-                        onTouchEnd={async () => {
-                          await fetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fame_display_offset: String(fameDisplayOffset) }) });
-                        }}
-                        className="flex-1 accent-pink-500"
-                      />
-                      <span className="text-xs text-pink-400 font-mono w-10 text-right">{fameDisplayOffset}px</span>
-                    </div>
-
-                    {/* Completed photo fade */}
-                    <div className="flex items-center gap-3">
-                      <label className="text-[10px] text-zinc-500 w-24 shrink-0">Completed Fade</label>
-                      <input
-                        type="range"
-                        min={0}
-                        max={100}
-                        step={5}
-                        value={fameCompletedFade}
-                        onChange={(e) => setFameCompletedFade(parseInt(e.target.value, 10))}
-                        onMouseUp={async () => {
-                          await fetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fame_completed_fade: String(fameCompletedFade) }) });
-                        }}
-                        onTouchEnd={async () => {
-                          await fetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fame_completed_fade: String(fameCompletedFade) }) });
-                        }}
-                        className="flex-1 accent-pink-500"
-                      />
-                      <span className="text-xs text-pink-400 font-mono w-10 text-right">{fameCompletedFade}%</span>
-                    </div>
-                  </div>
-                )}
-              </div>
             </div>
           </section>
         </div>
