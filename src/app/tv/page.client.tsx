@@ -236,8 +236,7 @@ function FameView({ item, completedFame, fameSettings, hideBackground }: { item:
   const photoSize = fameSettings.photoSize;
   const completedScale = fameSettings.completedScale / 100;
   const maxRotation = fameSettings.rotation;
-  const maxSpread = fameSettings.spread;
-  const maxSpreadY = fameSettings.spreadY;
+  const spreadPercent = Math.min(100, Math.max(0, fameSettings.spread)) / 100; // 0-1
 
   const rotation = ((item.id * 47) % (maxRotation * 2 + 1)) - maxRotation;
 
@@ -246,25 +245,35 @@ function FameView({ item, completedFame, fameSettings, hideBackground }: { item:
   const completedSize = Math.round(photoSize * completedScale);
 
   const total = backgroundPhotos.length;
-  const getScatterPosition = (id: number, index: number) => {
+  // Calculate the max pixel offset based on viewport
+  // spreadPercent 0 = no offset (stacked on center), 1 = max offset (~40vw each side)
+  const maxPixelOffset = spreadPercent * 40; // in vw units
+  
+  const getStackPosition = (id: number, index: number) => {
     const seed = id * 7919;
     // Alternate: even goes right, odd goes left
     const side = index % 2 === 0 ? 1 : -1;
     
-    // Progressively outward: early completed photos stay closer to center,
-    // later ones spread further. With only 1 completed photo, it stays near center.
-    const progress = total > 0 ? index / Math.max(1, total - 1) : 0;
-    const spreadAtProgress = maxSpread * (0.1 + progress * 0.9);
-    const minSpread = spreadAtProgress * 0.25;
-    const xVariation = ((seed % 1000) / 1000) * (spreadAtProgress - minSpread);
-    const x = side * (minSpread + xVariation);
+    // Progressive stacking: each successive photo offsets further
+    // progress 0 = first completed photo, 1 = last completed photo
+    const progress = total > 1 ? index / (total - 1) : 0;
     
-    const yProgress = total > 0 ? index / Math.max(1, total - 1) : 0;
-    const spreadYAtProgress = maxSpreadY * (0.05 + yProgress * 0.9);
-    const y = ((seed % 777) / 777) * spreadYAtProgress * 2 - spreadYAtProgress;
+    // Pixel offset: 0 at progress 0, maxPixelOffset at progress 1
+    const pixelOffset = progress * maxPixelOffset;
     
+    // X: alternate left/right, progressively further out
+    const x = side * pixelOffset;
+    
+    // Y: slight downward drift so they don't overlap horizontally
+    const y = index * 2.5;
+    
+    // Small deterministic rotation based on id (not random)
     const rotate = side * (((seed % (maxRotation + 1)) + 2) % (maxRotation + 1));
-    const scale = (completedScale * 0.8) + ((seed % 20) / 100);
+    
+    // Scale: slight size variation
+    const scaleVariation = 0.9 + ((seed % 15) / 100);
+    const scale = completedScale * scaleVariation;
+    
     return { x, y, rotate, scale };
   };
 
@@ -286,7 +295,7 @@ function FameView({ item, completedFame, fameSettings, hideBackground }: { item:
             // Calculate position using the original array index so layout remains stable
             // regardless of reverse order
             const originalIndex = backgroundPhotos.length - 1 - index;
-            const pos = getScatterPosition(photo.id, originalIndex);
+            const pos = getStackPosition(photo.id, originalIndex);
 
             return (
               <img
