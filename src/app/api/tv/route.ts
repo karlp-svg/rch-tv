@@ -103,7 +103,7 @@ export async function GET() {
         photoSize: parseInt(settings.fame_photo_size || '42', 10),
         completedScale: parseInt(settings.fame_completed_scale || '70', 10),
         rotation: parseInt(settings.fame_rotation || '15', 10),
-        spread: parseInt(settings.fame_spread || '600', 10),
+        spread: parseInt(settings.fame_spread || '50', 10),
         spreadY: parseInt(settings.fame_spread_y || '200', 10),
         titleOffset: parseInt(settings.fame_title_offset || '22', 10),
         displayOffset: parseInt(settings.fame_display_offset || '0', 10),

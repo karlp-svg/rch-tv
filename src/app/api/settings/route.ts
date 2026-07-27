@@ -10,7 +10,7 @@ const DEFAULTS: Record<string, string> = {
   fame_photo_size: '42',
   fame_completed_scale: '70',
   fame_rotation: '15',
-  fame_spread: '600',
+  fame_spread: '50',
   fame_spread_y: '200',
   fame_title_offset: '22',
   fame_display_offset: '0',
