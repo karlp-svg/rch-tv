@@ -46,7 +46,7 @@ export default function TVPage() {
   useEffect(() => {
     const fetchSession = async () => {
       try {
-        const res = await fetch('/api/admin/session', { cache: 'no-store' });
+        const res = await fetch(`/api/admin/session?_=${Date.now()}`, { cache: 'no-store' });
         if (res.ok) {
           const data = await res.json();
           if (data.session) {
@@ -75,7 +75,8 @@ export default function TVPage() {
     const checkForChanges = async () => {
       try {
         // Lightweight check endpoint - returns only metadata (~100 bytes)
-        const res = await fetch('/api/tv/check', { cache: 'no-store' });
+        // Add timestamp to bust OBS browser source cache
+        const res = await fetch(`/api/tv/check?_=${Date.now()}`, { cache: 'no-store' });
         if (!res.ok) return;
 
         const data = await res.json();
@@ -86,7 +87,7 @@ export default function TVPage() {
           lastKnownKey = newKey;
 
           if (data.hasContent) {
-            const fullRes = await fetch('/api/tv', { cache: 'no-store' });
+            const fullRes = await fetch(`/api/tv?_=${Date.now()}`, { cache: 'no-store' });
             if (fullRes.ok) {
               const fullData = await fullRes.json();
               const live: TVItem | null = fullData.current || null;

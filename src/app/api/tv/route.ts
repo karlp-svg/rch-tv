@@ -113,9 +113,11 @@ export async function GET() {
       lastUpdate,
     });
 
-    response.headers.set('Cache-Control', 'public, s-maxage=10, stale-while-revalidate=30');
-    response.headers.set('CDN-Cache-Control', 'public, max-age=10');
-    response.headers.set('Vary', 'Accept-Encoding');
+    // Force no cache for OBS browser source compatibility
+    response.headers.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+    response.headers.set('Pragma', 'no-cache');
+    response.headers.set('Expires', '0');
+    response.headers.set('Vary', '*');
 
     return response;
   } catch (error) {

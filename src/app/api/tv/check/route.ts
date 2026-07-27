@@ -76,7 +76,9 @@ export async function GET() {
       key: `shoutout-${latest.id}`,
       lastUpdate: new Date(latest.createdAt).getTime(),
     });
-    response.headers.set('Cache-Control', 'public, s-maxage=2, stale-while-revalidate=5');
+    response.headers.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+    response.headers.set('Pragma', 'no-cache');
+    response.headers.set('Expires', '0');
     return response;
   } catch (error) {
     console.error('Error checking TV status:', error);
