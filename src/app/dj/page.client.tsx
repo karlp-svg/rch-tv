@@ -108,7 +108,7 @@ export default function DJAdminPage() {
   const [famePhotoSize, setFamePhotoSize] = useState(42);
   const [fameCompletedScale, setFameCompletedScale] = useState(70);
   const [fameRotation, setFameRotation] = useState(15);
-  const [fameSpread, setFameSpread] = useState(50);
+  const [fameSpread, setFameSpread] = useState(30);
   const [fameSpreadY, setFameSpreadY] = useState(200);
   const [fameTitleOffset, setFameTitleOffset] = useState(22);
   const [fameDisplayOffset, setFameDisplayOffset] = useState(0);
@@ -783,12 +783,12 @@ export default function DJAdminPage() {
 
                     {/* Spread Left/Right */}
                     <div className="flex items-center gap-3">
-                      <label className="text-[10px] text-zinc-500 w-24 shrink-0">Spread</label>
+                      <label className="text-[10px] text-zinc-500 w-24 shrink-0">Spread (px)</label>
                       <input
                         type="range"
                         min={0}
-                        max={100}
-                        step={5}
+                        max={300}
+                        step={10}
                         value={fameSpread}
                         onChange={(e) => setFameSpread(parseInt(e.target.value, 10))}
                         onMouseUp={async () => {
@@ -799,7 +799,7 @@ export default function DJAdminPage() {
                         }}
                         className="flex-1 accent-pink-500"
                       />
-                      <span className="text-xs text-pink-400 font-mono w-10 text-right">{fameSpread}%</span>
+                      <span className="text-xs text-pink-400 font-mono w-10 text-right">{fameSpread}px</span>
                     </div>
 
                     {/* Title Y Offset */}

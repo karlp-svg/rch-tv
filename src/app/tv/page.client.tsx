@@ -236,7 +236,9 @@ function FameView({ item, completedFame, fameSettings, hideBackground }: { item:
   const photoSize = fameSettings.photoSize;
   const completedScale = fameSettings.completedScale / 100;
   const maxRotation = fameSettings.rotation;
-  const spreadPercent = Math.min(100, Math.max(0, fameSettings.spread)) / 100; // 0-1
+  // Pixel offset per step — each successive photo on the same side
+  // is pushed this many pixels further from center than the last
+  const stepPx = Math.min(300, Math.max(0, fameSettings.spread));
 
   const rotation = ((item.id * 47) % (maxRotation * 2 + 1)) - maxRotation;
 
@@ -245,25 +247,23 @@ function FameView({ item, completedFame, fameSettings, hideBackground }: { item:
   const completedSize = Math.round(photoSize * completedScale);
 
   const total = backgroundPhotos.length;
-  // spreadPercent 0 = no offset (stacked on center), 1 = max offset
-  // The pixel offset scales proportionally - at 100% spread the last photo
-  // is pushed 800px from center (covers most of a 1920px screen)
-  const maxPixelOffset = spreadPercent * 800;
   
   const getStackPosition = (id: number, index: number) => {
     const seed = id * 7919;
     // Alternate: even goes right, odd goes left
     const side = index % 2 === 0 ? 1 : -1;
     
-    // Progressive stacking: each successive photo offsets further
-    // progress 0 = first completed photo, 1 = last completed photo
-    const progress = total > 1 ? index / (total - 1) : 0;
+    // Which number on this side (0 = first right, 1 = first left, 2 = second right...)
+    const sideIndex = Math.floor(index / 2);
     
-    // Pixel offset: 0 at progress 0, maxPixelOffset at progress 1
-    const pixelOffset = progress * maxPixelOffset;
-    
-    // X: alternate left/right, progressively further out
-    const x = side * pixelOffset;
+    // Each photo on the same side is offset by stepPx further from center
+    // photo 0 (right #0): offset = 1 * stepPx
+    // photo 1 (left #0):  offset = -1 * stepPx
+    // photo 2 (right #1): offset = 2 * stepPx
+    // photo 3 (left #1):  offset = -2 * stepPx
+    // photo 4 (right #2): offset = 3 * stepPx
+    const step = (sideIndex + 1) * stepPx;
+    const x = side * step;
     
     // Y: slight downward drift so they don't overlap horizontally
     const y = index * 2.5;
