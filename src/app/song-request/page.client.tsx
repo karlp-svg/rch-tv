@@ -289,10 +289,10 @@ export default function SongRequestPage() {
               Your request has been submitted for review. If the DJ approves it, you'll hear it on the speakers and see it on the big screen!
             </p>
             <button
-              onClick={() => setSubmitted(false)}
+              onClick={() => { window.location.href = '/dashboard'; }}
               className="w-full py-3 bg-white text-black font-semibold rounded-2xl text-sm hover:bg-zinc-200 transition-colors"
             >
-              Send Another
+              Back to Menu
             </button>
           </div>
         </div>

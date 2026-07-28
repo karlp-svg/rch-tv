@@ -38,11 +38,11 @@ export async function getOrCreatePublicSession(): Promise<string> {
 }
 
 export async function validatePublicSession(token: string | null | undefined): Promise<boolean> {
+  // In sandbox/dev mode, skip session check (allows empty token too)
+  if (process.env.NEXT_PUBLIC_PRODUCTION_MODE !== 'true') return true;
   if (!token) return false;
   // DJ manual entries bypass session check (POST from DJ console)
   if (token === 'dj-manual') return true;
-  // In sandbox/dev mode, skip session check
-  if (process.env.NEXT_PUBLIC_PRODUCTION_MODE !== 'true') return true;
   const current = await getPublicSession();
   if (!current) {
     // No session in DB yet (TV display might not have loaded).

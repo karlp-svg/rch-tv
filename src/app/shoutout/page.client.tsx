@@ -235,10 +235,10 @@ export default function ShoutoutPage() {
               Your shoutout has been submitted for review. If approved, it'll appear on the RCH TV screen shortly!
             </p>
             <button
-              onClick={() => setSubmitted(false)}
+              onClick={() => { window.location.href = '/dashboard'; }}
               className="w-full py-3 bg-white text-black font-semibold rounded-2xl text-sm hover:bg-zinc-200 transition-colors"
             >
-              Send Another
+              Back to Menu
             </button>
           </div>
         </div>

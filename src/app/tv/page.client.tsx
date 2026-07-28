@@ -61,6 +61,15 @@ export default function TVPage() {
       } catch (_) {}
     };
     fetchSession();
+    // Also load settings so hideBackground is initialized even with no items
+    fetch('/api/settings', { cache: 'no-store' })
+      .then(r => r.ok ? r.json() : null)
+      .then(s => {
+        if (s && s.tv_hide_background !== undefined) {
+          setHideBackground(s.tv_hide_background === 'true');
+        }
+      })
+      .catch(() => {});
     const interval = setInterval(fetchSession, 60000); // refresh every minute
     return () => clearInterval(interval);
   }, []);

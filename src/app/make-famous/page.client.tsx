@@ -457,15 +457,34 @@ export default function MakeFamousPage() {
                       title="Flip camera"><SwitchCamera className="w-3.5 h-3.5" /></button>
                   </>
                 ) : (
-                  <div className="w-full h-full flex flex-col items-center justify-center bg-zinc-800 text-white gap-3 p-6 text-center">
-                    <div className="w-14 h-14 rounded-full bg-white/10 flex items-center justify-center">
-                      <Camera className="w-7 h-7 text-white/80" />
+                  <div className="w-full h-full flex flex-col items-center justify-center bg-zinc-800 text-white gap-2 p-6 text-center">
+                    <div className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center">
+                      <Camera className="w-6 h-6 text-white/80" />
                     </div>
                     <div className="text-sm font-medium">Take your polaroid</div>
                     <button type="button" onClick={() => startCamera('user')} disabled={cameraStarting}
-                      className="mt-1 px-5 py-2 bg-white text-black rounded-full text-xs font-semibold flex items-center gap-2 disabled:opacity-60">
+                      className="px-5 py-2 bg-white text-black rounded-full text-xs font-semibold flex items-center gap-2 disabled:opacity-60">
                       {cameraStarting ? <>OPENING <Loader2 className="w-3.5 h-3.5 animate-spin" /></> : <>OPEN CAMERA <Camera className="w-3.5 h-3.5" /></>}
                     </button>
+                    <div className="flex items-center gap-2 w-full mt-1">
+                      <div className="flex-1 h-px bg-white/10"></div>
+                      <span className="text-[10px] text-zinc-500">or</span>
+                      <div className="flex-1 h-px bg-white/10"></div>
+                    </div>
+                    <label className="px-4 py-2 bg-zinc-700 hover:bg-zinc-600 text-white rounded-full text-[10px] font-semibold cursor-pointer transition flex items-center gap-1.5">
+                      📁 UPLOAD PHOTO
+                      <input type="file" accept="image/*" className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          const reader = new FileReader();
+                          reader.onload = (ev) => {
+                            setCapturedRaw(ev.target?.result as string);
+                          };
+                          reader.readAsDataURL(file);
+                        }}
+                      />
+                    </label>
                     {cameraError && <div className="text-[10px] text-red-400 mt-1 max-w-[240px]">{cameraError}</div>}
                   </div>
                 )}
@@ -610,10 +629,10 @@ export default function MakeFamousPage() {
               Your photo has been submitted for review. When approved, you'll see yourself on the big screen alongside other legends!
             </p>
             <button
-              onClick={() => setSubmitted(false)}
+              onClick={() => { window.location.href = '/dashboard'; }}
               className="w-full py-3 bg-white text-black font-semibold rounded-2xl text-sm hover:bg-zinc-200 transition-colors"
             >
-              Send Another
+              Back to Menu
             </button>
           </div>
         </div>
