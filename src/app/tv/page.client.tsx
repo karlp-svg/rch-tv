@@ -119,7 +119,7 @@ export default function TVPage() {
 
   if (!currentItem) {
     return (
-      <main className="w-screen h-screen bg-black flex flex-col items-center justify-center p-8">
+      <main className={`w-screen h-screen ${hideBackground ? 'bg-transparent' : 'bg-black'} flex flex-col items-center justify-center p-8`}>
         <div className="text-center mb-8">
           <div
             className="text-7xl sm:text-8xl font-normal tracking-[0.08em] text-transparent bg-clip-text bg-gradient-to-br from-purple-400 via-pink-400 to-purple-600 mb-4 whitespace-pre"
@@ -147,7 +147,7 @@ export default function TVPage() {
   }
 
   return (
-    <main className="w-screen h-screen bg-black overflow-hidden">
+    <main className={`w-screen h-screen ${hideBackground ? 'bg-transparent' : 'bg-black'} overflow-hidden`}>
       <div
         className={`w-full h-full flex items-center justify-center transition-opacity duration-400 ${
           fading ? 'opacity-0' : 'opacity-100'
@@ -163,7 +163,7 @@ export default function TVPage() {
 
 function ShoutoutView({ item, hideBackground }: { item: Extract<TVItem, { type: 'shoutout' }>; hideBackground?: boolean }) {
   return (
-    <div className={`w-full h-full ${hideBackground ? 'bg-black' : 'bg-gradient-to-br from-purple-950 via-black to-indigo-950'} flex flex-col items-center justify-center p-12 text-center`}>
+    <div className={`w-full h-full ${hideBackground ? 'bg-transparent' : 'bg-gradient-to-br from-purple-950 via-black to-indigo-950'} flex flex-col items-center justify-center p-12 text-center`}>
       <div className="text-5xl sm:text-6xl uppercase tracking-[0.08em] text-purple-400 font-normal whitespace-pre mb-1" style={{ fontFamily: "'Vortax', system-ui, sans-serif" }}>
         RCH  TV
       </div>
@@ -193,7 +193,7 @@ function ShoutoutView({ item, hideBackground }: { item: Extract<TVItem, { type: 
 
 function SongView({ item, hideBackground }: { item: Extract<TVItem, { type: 'song' }>; hideBackground?: boolean }) {
   return (
-    <div className={`w-full h-full ${hideBackground ? 'bg-black' : 'bg-gradient-to-br from-amber-950 via-black to-yellow-950'} flex flex-col items-center justify-center p-12 text-center`}>
+    <div className={`w-full h-full ${hideBackground ? 'bg-transparent' : 'bg-gradient-to-br from-amber-950 via-black to-yellow-950'} flex flex-col items-center justify-center p-12 text-center`}>
       <div className="text-5xl sm:text-6xl uppercase tracking-[0.08em] text-amber-400 font-normal whitespace-pre mb-1" style={{ fontFamily: "'Vortax', system-ui, sans-serif" }}>
         RCH  TV
       </div>
@@ -284,7 +284,7 @@ function FameView({ item, completedFame, fameSettings, hideBackground }: { item:
   const completedFilter = `saturate(${(0.2 + fadeAmount * 0.8).toFixed(2)}) brightness(${(0.45 + fadeAmount * 0.55).toFixed(2)}) contrast(${(0.8 + fadeAmount * 0.2).toFixed(2)})`;
 
   return (
-    <div className={`relative w-full h-full ${hideBackground ? 'bg-black' : 'bg-gradient-to-br from-pink-950 via-black to-rose-950'} flex items-center justify-center p-8 overflow-hidden`}>
+    <div className={`relative w-full h-full ${hideBackground ? 'bg-transparent' : 'bg-gradient-to-br from-pink-950 via-black to-rose-950'} flex items-center justify-center p-8 overflow-hidden`}>
       {/* Everything below shifts by displayOffset (whole layout) */}
       <div
         className="absolute inset-0"

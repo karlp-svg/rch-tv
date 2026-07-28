@@ -383,7 +383,6 @@ export default function MakeFamousPage() {
         setPolaroidPreview(null);
         setShowHandleOnTV(false);
         setSubmitted(true);
-        setTimeout(() => setSubmitted(false), 3200);
         fetchSubmissions();
       } else {
         alert('Upload failed. Try again.');
@@ -527,14 +526,8 @@ export default function MakeFamousPage() {
 
             <button type="submit" disabled={isSubmitting || !capturedRaw}
               className="mt-2 flex w-full items-center justify-center gap-2 bg-white hover:bg-zinc-100 disabled:bg-zinc-700 disabled:text-zinc-400 text-black font-semibold py-3.5 rounded-2xl text-sm transition-colors">
-              {isSubmitting ? <>UPLOADING <Loader2 className="animate-spin w-4 h-4" /></> : <>SHOW ME ON TV <Send className="w-4 h-4" /></>}
+              {isSubmitting ? <>UPLOADING <Loader2 className="animate-spin w-4 h-4" /></> : <>SEND TO RCH TV <Send className="w-4 h-4" /></>}
             </button>
-
-            {submitted && (
-              <p className="text-center text-emerald-400 text-xs flex items-center justify-center gap-1.5">
-                <CheckCircle2 className="w-3.5 h-3.5" /> UPLOADED FOR REVIEW
-              </p>
-            )}
           </div>
         </form>
 
@@ -602,6 +595,27 @@ export default function MakeFamousPage() {
             className="max-w-full max-h-full object-contain rounded-lg"
             onClick={(e) => e.stopPropagation()}
           />
+        </div>
+      )}
+
+      {/* Thank You overlay */}
+      {submitted && (
+        <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-6">
+          <div className="bg-zinc-900 border border-white/10 rounded-3xl max-w-sm w-full p-8 text-center shadow-2xl">
+            <div className="mx-auto w-16 h-16 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl flex items-center justify-center mb-4">
+              <CheckCircle2 className="w-8 h-8 text-emerald-400" />
+            </div>
+            <h3 className="text-xl font-bold mb-2">You're on the Wall of Fame!</h3>
+            <p className="text-zinc-400 text-xs mb-6 leading-relaxed">
+              Your photo has been submitted for review. When approved, you'll see yourself on the big screen alongside other legends!
+            </p>
+            <button
+              onClick={() => setSubmitted(false)}
+              className="w-full py-3 bg-white text-black font-semibold rounded-2xl text-sm hover:bg-zinc-200 transition-colors"
+            >
+              Send Another
+            </button>
+          </div>
         </div>
       )}
     </main>

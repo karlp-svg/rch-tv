@@ -90,7 +90,6 @@ export default function ShoutoutPage() {
         setMessage('');
         setShowHandleOnTV(false);
         setSubmitted(true);
-        setTimeout(() => setSubmitted(false), 2800);
         fetchShoutouts();
       }
     } catch (e) {
@@ -175,14 +174,8 @@ export default function ShoutoutPage() {
             disabled={isSubmitting || !message.trim()}
             className="w-full py-3.5 bg-white text-black font-semibold rounded-2xl flex items-center justify-center gap-2 hover:bg-white/90 disabled:opacity-50 transition-all active:scale-[0.985] text-sm"
           >
-            {isSubmitting ? <>SENDING <Loader2 className="w-4 h-4 animate-spin" /></> : <>SEND TO BIG SCREEN <Send className="w-4 h-4" /></>}
+            {isSubmitting ? <>SENDING <Loader2 className="w-4 h-4 animate-spin" /></> : <>SEND TO RCH TV <Send className="w-4 h-4" /></>}
           </button>
-          
-          {submitted && (
-            <div className="mt-3 text-center text-emerald-400 text-xs flex items-center justify-center gap-2">
-              <CheckCircle2 className="w-3.5 h-3.5" /> SUBMITTED FOR REVIEW
-            </div>
-          )}
         </form>
 
         <div className="text-center mt-4 text-zinc-500 text-[10px] px-2">
@@ -229,6 +222,27 @@ export default function ShoutoutPage() {
           })}
         </div>
       </div>
+
+      {/* Thank You overlay */}
+      {submitted && (
+        <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-6">
+          <div className="bg-zinc-900 border border-white/10 rounded-3xl max-w-sm w-full p-8 text-center shadow-2xl">
+            <div className="mx-auto w-16 h-16 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl flex items-center justify-center mb-4">
+              <CheckCircle2 className="w-8 h-8 text-emerald-400" />
+            </div>
+            <h3 className="text-xl font-bold mb-2">Thanks, you're on the list!</h3>
+            <p className="text-zinc-400 text-xs mb-6 leading-relaxed">
+              Your shoutout has been submitted for review. If approved, it'll appear on the RCH TV screen shortly!
+            </p>
+            <button
+              onClick={() => setSubmitted(false)}
+              className="w-full py-3 bg-white text-black font-semibold rounded-2xl text-sm hover:bg-zinc-200 transition-colors"
+            >
+              Send Another
+            </button>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

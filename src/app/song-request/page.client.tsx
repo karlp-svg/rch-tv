@@ -109,7 +109,6 @@ export default function SongRequestPage() {
         setAnyTitle(false);
         setShowHandleOnTV(false);
         setSubmitted(true);
-        setTimeout(() => setSubmitted(false), 2500);
         fetchRequests();
       } else {
         let apiMessage = 'Could not submit request.';
@@ -227,15 +226,9 @@ export default function SongRequestPage() {
             disabled={isSubmitting || !artist.trim() || (!anyTitle && !title.trim())}
             className="mt-2 w-full py-3.5 bg-gradient-to-r from-amber-400 to-yellow-400 text-black font-semibold text-sm rounded-2xl flex items-center justify-center gap-2 hover:brightness-110 disabled:opacity-60 transition-all"
           >
-            {isSubmitting ? 'SENDING...' : 'REQUEST THIS SONG'}
+            {isSubmitting ? 'SENDING...' : 'SEND TO RCH TV'}
             {!isSubmitting && <Music className="w-4 h-4" />}
           </button>
-          
-          {submitted && (
-            <p className="text-center text-emerald-400 text-xs flex items-center justify-center gap-1.5">
-              <CheckCircle2 className="w-3.5 h-3.5" /> REQUEST RECEIVED
-            </p>
-          )}
           {submitError && (
             <p className="text-center text-red-300 text-xs leading-relaxed rounded-xl bg-red-500/10 border border-red-500/20 px-3 py-2">
               {submitError}
@@ -283,6 +276,27 @@ export default function SongRequestPage() {
           )}
         </div>
       </div>
+
+      {/* Thank You overlay */}
+      {submitted && (
+        <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-6">
+          <div className="bg-zinc-900 border border-white/10 rounded-3xl max-w-sm w-full p-8 text-center shadow-2xl">
+            <div className="mx-auto w-16 h-16 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl flex items-center justify-center mb-4">
+              <CheckCircle2 className="w-8 h-8 text-emerald-400" />
+            </div>
+            <h3 className="text-xl font-bold mb-2">Song Request Sent!</h3>
+            <p className="text-zinc-400 text-xs mb-6 leading-relaxed">
+              Your request has been submitted for review. If the DJ approves it, you'll hear it on the speakers and see it on the big screen!
+            </p>
+            <button
+              onClick={() => setSubmitted(false)}
+              className="w-full py-3 bg-white text-black font-semibold rounded-2xl text-sm hover:bg-zinc-200 transition-colors"
+            >
+              Send Another
+            </button>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

@@ -600,14 +600,14 @@ export default function DJAdminPage() {
                       style={{ width: `${Math.max(0, (countdown / displayDuration) * 100)}%` }}
                     />
                   </div>
-                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center justify-between gap-2">
                     <div className="text-[10px] text-zinc-500">{tvQueueLength > 1 ? `+${tvQueueLength - 1} more queued` : 'Nothing queued'}</div>
                     <div className="flex items-center gap-2">
                       <button
                         onClick={completeCurrentAction}
                         className="text-[10px] px-3 py-1.5 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/30 rounded-full font-semibold flex items-center gap-1 transition"
                       >
-                        <CheckCircle2 className="w-3 h-3" /> Complete & Next
+                        <CheckCircle2 className="w-3 h-3" /> {tvQueueLength > 1 ? 'Complete & Next' : 'Complete'}
                       </button>
                     </div>
                   </div>
