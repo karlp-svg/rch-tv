@@ -66,8 +66,7 @@ function makePolaroid(
   rawBase64: string,
   caption: string,
   handle: string | null,
-  showHandle: boolean,
-  rotationDeg: number = -6.3
+  showHandle: boolean
 ): Promise<string> {
   return new Promise((resolve, reject) => {
     const run = () => {
@@ -151,16 +150,16 @@ function makePolaroid(
           stickerFontSize -= 3;
         }
 
-        // Position over bottom-right corner of photo
+        // Position at bottom-RIGHT of the photo, sitting straight (no rotation),
+        // straddling the photo's bottom edge so it overlays onto the white frame.
         const photoRight = POLAROID_FRAME + img.width;
         const photoBottom = POLAROID_FRAME + img.height;
         const insetCorner = 18;
         const centerX = photoRight - stickerW / 2 - insetCorner;
-        const centerY = photoBottom - stickerH / 2 - insetCorner;
+        const centerY = photoBottom;
 
         ctx.save();
         ctx.translate(centerX, centerY);
-        ctx.rotate(-12.5 * Math.PI / 180); // Fixed -12.5° anti-clockwise (half of 25°)
 
         ctx.shadowColor = 'rgba(0,0,0,0.35)';
         ctx.shadowBlur = 16;
@@ -225,7 +224,6 @@ export default function MakeFamousPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [fullscreenImage, setFullscreenImage] = useState<string | null>(null);
-  const [polaroidRotation, setPolaroidRotation] = useState<number>(-6.3);
 
   const [cameraOn, setCameraOn] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
@@ -255,11 +253,11 @@ export default function MakeFamousPage() {
     if (polaroidTimer.current) clearTimeout(polaroidTimer.current);
     polaroidTimer.current = setTimeout(async () => {
       try {
-        const p = await makePolaroid(capturedRaw, comment.trim(), instagramHandle.trim() || null, showHandleOnTV, polaroidRotation);
+        const p = await makePolaroid(capturedRaw, comment.trim(), instagramHandle.trim() || null, showHandleOnTV);
         setPolaroidPreview(p);
       } catch { setPolaroidPreview(null); }
     }, 250);
-  }, [capturedRaw, comment, instagramHandle, showHandleOnTV, polaroidRotation]);
+  }, [capturedRaw, comment, instagramHandle, showHandleOnTV]);
 
   const fetchSubmissions = async () => {
     try {
@@ -318,6 +316,35 @@ export default function MakeFamousPage() {
 
   const flipCamera = () => startCamera(facingMode === 'user' ? 'environment' : 'user');
 
+  // Fallback for environments where getUserMedia is blocked (e.g. embedded
+  // iframes without camera permission). Uses the native file/camera picker and
+  // centre-crops the chosen image to the same square the live capture produces.
+  const handleFilePick = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        const sqSize = Math.min(img.width, img.height);
+        const sx = (img.width - sqSize) / 2;
+        const sy = (img.height - sqSize) / 2;
+        const canvas = document.createElement('canvas');
+        canvas.width = CAPTURE_SIZE;
+        canvas.height = CAPTURE_SIZE;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+        ctx.drawImage(img, sx, sy, sqSize, sqSize, 0, 0, CAPTURE_SIZE, CAPTURE_SIZE);
+        setCapturedRaw(canvas.toDataURL('image/jpeg', 0.9));
+        setCameraError(null);
+        stopCamera();
+      };
+      img.src = String(reader.result);
+    };
+    reader.readAsDataURL(file);
+  };
+
   const capturePhoto = () => {
     const video = videoRef.current;
     if (!video || !video.videoWidth || !video.videoHeight) return;
@@ -334,9 +361,6 @@ export default function MakeFamousPage() {
     if (facingMode === 'user') { ctx.translate(CAPTURE_SIZE, 0); ctx.scale(-1, 1); }
     ctx.drawImage(video, sx, sy, sqSize, sqSize, 0, 0, CAPTURE_SIZE, CAPTURE_SIZE);
     setCapturedRaw(canvas.toDataURL('image/jpeg', 0.9));
-    // Random rotation between -45 and 45 degrees for handle sticker (each submission different)
-    const randomRot = Math.random() * 90 - 45;
-    setPolaroidRotation(randomRot);
     stopCamera();
   };
 
@@ -357,7 +381,7 @@ export default function MakeFamousPage() {
     const sessionToken = getStoredPublicSession();
 
     setIsSubmitting(true);
-    const finalPolaroid = await makePolaroid(capturedRaw, comment.trim(), firstPageHandle || null, showHandleOnTV, polaroidRotation)
+    const finalPolaroid = await makePolaroid(capturedRaw, comment.trim(), firstPageHandle || null, showHandleOnTV)
       .catch(() => null);
 
     try {
@@ -467,6 +491,19 @@ export default function MakeFamousPage() {
                       {cameraStarting ? <>OPENING <Loader2 className="w-3.5 h-3.5 animate-spin" /></> : <>OPEN CAMERA <Camera className="w-3.5 h-3.5" /></>}
                     </button>
                     {cameraError && <div className="text-[10px] text-red-400 mt-1 max-w-[240px]">{cameraError}</div>}
+                    {/* Fallback file picker only visible outside production (sandbox/dev) */}
+                    {process.env.NEXT_PUBLIC_PRODUCTION_MODE !== 'true' && (
+                      <label className="mt-1 px-4 py-1.5 bg-white/10 hover:bg-white/20 border border-white/20 text-white rounded-full text-[11px] font-semibold cursor-pointer transition">
+                        Use photo instead
+                        <input
+                          type="file"
+                          accept="image/*"
+                          capture="user"
+                          onChange={handleFilePick}
+                          className="hidden"
+                        />
+                      </label>
+                    )}
                   </div>
                 )}
               </div>

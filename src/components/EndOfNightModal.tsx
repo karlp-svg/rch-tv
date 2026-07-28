@@ -26,6 +26,7 @@ type PhotoItem = {
   polaroidSrc?: string | null;
   imageSrc?: string | null;
   caption: string | null;
+  name?: string | null;
   instagramHandle?: string | null;
   showHandleOnTv?: boolean;
 };
@@ -554,21 +555,27 @@ async function generatePhotosPost(items: PhotoItem[], tagline: string): Promise<
 
   drawHeader(ctx, '#f472b6', 'Wall of Fame', "400 76px 'Westmeath', sans-serif");
 
-  const imgs: HTMLImageElement[] = [];
+  const photos: Array<{ item: PhotoItem; img: HTMLImageElement }> = [];
   for (const item of items) {
-    const src = item.polaroidSrc || item.imageSrc || `/api/fame/image/${item.id}?v=polaroid`;
+    // Build the end-of-night cards from the raw photo where possible so the
+    // latest name/handle layout is applied fresh to the generated post.
+    const src = item.imageSrc || `/api/fame/image/${item.id}`;
     try {
-      imgs.push(await loadImg(src));
+      photos.push({ item, img: await loadImg(src) });
     } catch {
       try {
-        imgs.push(await loadImg(`/api/fame/image/${item.id}?v=polaroid`));
-      } catch { /* skip */ }
+        photos.push({ item, img: await loadImg(`/api/fame/image/${item.id}`) });
+      } catch {
+        try {
+          photos.push({ item, img: await loadImg(item.polaroidSrc || `/api/fame/image/${item.id}?v=polaroid`) });
+        } catch { /* skip */ }
+      }
     }
   }
 
   // Safe 2-column grid: roomy enough to scatter, constrained inside the 9:16 frame.
   const cols = 2;
-  const rows = Math.ceil(imgs.length / cols);
+  const rows = Math.ceil(photos.length / cols);
   const areaTop = 400;
   const areaBottom = H - 300; // keep clear of the bottom tagline
   const cellH = (areaBottom - areaTop) / Math.max(rows, 1);
@@ -578,10 +585,10 @@ async function generatePhotosPost(items: PhotoItem[], tagline: string): Promise<
   const canvasMargin = 38;
   const verticalMargin = 16;
 
-  const isOdd = imgs.length % 2 !== 0;
-  const lastIndex = imgs.length - 1;
+  const isOdd = photos.length % 2 !== 0;
+  const lastIndex = photos.length - 1;
 
-  imgs.forEach((img, i) => {
+  photos.forEach(({ item, img }, i) => {
     const isLastOdd = isOdd && i === lastIndex;
     const col = isLastOdd ? 0 : i % cols; // last odd photo gets col 0 but centred
     const row = Math.floor(i / cols);
@@ -595,15 +602,19 @@ async function generatePhotosPost(items: PhotoItem[], tagline: string): Promise<
     // Scattered but safe rotation: -20° to +20°.
     const rot = ((i * 73) % 41 - 20) * (Math.PI / 180);
 
-    const scale = Math.min(maxPhotoW / img.width, maxPhotoH / img.height) * (0.88 + (i % 4) * 0.04);
-    const dw = img.width * scale;
-    const dh = img.height * scale;
+    // New end-of-night polaroid card: raw photo + white frame + name on card + handle bottom-right.
+    const cardScale = 0.88 + (i % 4) * 0.04;
+    const cardW = Math.min(maxPhotoW, maxPhotoH / 1.24) * cardScale;
+    const frame = cardW * 0.055;
+    const bottomH = cardW * 0.22;
+    const photoW = cardW - frame * 2;
+    const cardH = frame + photoW + bottomH;
 
     // Rotated bounding box; clamp its centre to safe canvas/title/footer bounds.
     const cos = Math.abs(Math.cos(rot));
     const sin = Math.abs(Math.sin(rot));
-    const rotatedW = dw * cos + dh * sin;
-    const rotatedH = dw * sin + dh * cos;
+    const rotatedW = cardW * cos + cardH * sin;
+    const rotatedH = cardW * sin + cardH * cos;
     const cx = Math.max(canvasMargin + rotatedW / 2, Math.min(W - canvasMargin - rotatedW / 2, rawCx));
     const cy = Math.max(areaTop + verticalMargin + rotatedH / 2, Math.min(areaBottom - verticalMargin - rotatedH / 2, rawCy));
 
@@ -613,9 +624,39 @@ async function generatePhotosPost(items: PhotoItem[], tagline: string): Promise<
     ctx.shadowColor = 'rgba(0,0,0,0.65)';
     ctx.shadowBlur = 30;
     ctx.shadowOffsetY = 12;
-    ctx.drawImage(img, -dw / 2, -dh / 2, dw, dh);
+
+    // White polaroid card.
+    ctx.fillStyle = '#fffffe';
+    ctx.fillRect(-cardW / 2, -cardH / 2, cardW, cardH);
+    ctx.shadowColor = 'transparent';
+
+    // Square centre-crop of the raw photo.
+    const sq = Math.min(img.width, img.height);
+    const sx = (img.width - sq) / 2;
+    const sy = (img.height - sq) / 2;
+    ctx.drawImage(img, sx, sy, sq, sq, -photoW / 2, -cardH / 2 + frame, photoW, photoW);
+
+    // Name on the white card/chin area.
+    const displayName = (item.name || item.caption || '').trim();
+    if (displayName) {
+      ctx.fillStyle = '#111827';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'middle';
+      ctx.font = `400 ${Math.max(22, Math.round(cardW * 0.09))}px 'Gochi Hand', 'Permanent Marker', cursive`;
+      let text = displayName;
+      const maxNameW = cardW * 0.52;
+      while (ctx.measureText(text).width > maxNameW && text.length > 8) {
+        text = text.slice(0, -2) + '…';
+      }
+      ctx.fillText(text, -cardW / 2 + frame * 1.25, cardH / 2 - bottomH * 0.45);
+    }
+
+    // Handle bottom-right, half over the card edge, matching the latest TV/polaroid placement.
+    if (item.showHandleOnTv && item.instagramHandle) {
+      drawHandleSticker(ctx, cardW / 2 - frame * 2.1, cardH / 2, item.instagramHandle, Math.max(16, Math.round(cardW * 0.055)), 0);
+    }
+
     ctx.restore();
-    // No additional Instagram sticker on Wall of Fame posts.
   });
 
   drawFooter(ctx, tagline);

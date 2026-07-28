@@ -136,21 +136,27 @@ export default function TVPage() {
     }
     return (
       <main className={`w-screen h-screen ${hideBackground ? 'bg-transparent' : 'bg-black'} flex flex-col items-center justify-center p-8`}>
-        {/* RCH TV title on a solid grey deck card */}
-        <div className="bg-zinc-800 border border-white/10 rounded-2xl px-10 py-5 mb-8 shadow-2xl">
+        {/* RCH TV title on a tight solid grey deck card */}
+        <div className="bg-zinc-800 border border-white/10 rounded-2xl px-6 py-3 mb-6 shadow-2xl">
           <div
-            className="text-7xl sm:text-8xl font-normal tracking-[0.08em] text-transparent bg-clip-text bg-gradient-to-br from-purple-400 via-pink-400 to-purple-600 whitespace-pre text-center"
+            className="text-6xl sm:text-7xl font-normal tracking-[0.08em] text-transparent bg-clip-text bg-gradient-to-br from-purple-400 via-pink-400 to-purple-600 whitespace-pre text-center"
             style={{ fontFamily: "'Vortax', 'Orbitron', 'Audiowide', system-ui, sans-serif" }}
           >
             RCH  TV
           </div>
+          <div
+            className="text-center text-white/70 mt-2 tracking-[0.32em] uppercase"
+            style={{ fontFamily: "'Orbitron', 'Audiowide', sans-serif", fontSize: 'clamp(0.65rem, 1vw, 0.95rem)', fontWeight: 300 }}
+          >
+            WAITING ON REQUESTS · SCAN QR CODE
+          </div>
         </div>
         {publicQr ? (
-          <div className="bg-zinc-800 border border-white/10 rounded-2xl w-64 h-64 sm:w-80 sm:h-80 p-5 shadow-2xl flex items-center justify-center">
-            <img src={publicQr} alt="Scan to join" className="w-full h-full object-contain" />
+          <div className="bg-zinc-800 border border-white/10 rounded-2xl p-3 shadow-2xl flex items-center justify-center">
+            <img src={publicQr} alt="Scan to join" className="w-56 h-56 sm:w-72 sm:h-72 object-contain" />
           </div>
         ) : (
-          <div className="bg-zinc-800 border border-white/10 rounded-2xl w-64 h-64 sm:w-80 sm:h-80 p-5 shadow-2xl grid place-items-center text-zinc-500">
+          <div className="bg-zinc-800 border border-white/10 rounded-2xl p-3 shadow-2xl w-56 h-56 sm:w-72 sm:h-72 grid place-items-center text-zinc-500">
             Loading QR...
           </div>
         )}
@@ -241,7 +247,7 @@ function ShoutoutView({ item, hideBackground }: { item: Extract<TVItem, { type: 
           className="text-center text-purple-200 mt-1"
           style={{ fontFamily: "'Gochi Hand', cursive", fontSize: 'clamp(1rem, 1.6vw, 1.75rem)' }}
         >
-          Tonight&apos;s Shoutouts
+          Crowd Shoutout
         </div>
       </div>
 
@@ -542,15 +548,7 @@ function FameView({ item, completedFame, fameSettings, hideBackground }: { item:
                 (e.currentTarget as HTMLImageElement).src = `${IMAGE_PROXY_BASE}${item.id}`;
               }}
             />
-            {/* Handle: bottom-right, half over photo / onto white polaroid frame, no tilt */}
-            {item.showHandleOnTv && item.instagramHandle && (
-              <HandleSticker
-                handle={item.instagramHandle}
-                right="0.75rem"
-                keepLevel
-                parentRotationDeg={rotation}
-              />
-            )}
+            {/* Handle sticker intentionally omitted for fame — already drawn on the polaroid itself */}
           </div>
         </div>
       </div>
