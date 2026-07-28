@@ -548,25 +548,19 @@ export default function DJAdminPage() {
 
         <div className="mb-6 grid grid-cols-1 xl:grid-cols-[220px_1fr] gap-4 items-start">
           {/* Left title column */}
-          <aside className="rounded-3xl border border-white/10 bg-zinc-900/70 p-5 min-h-[210px] flex flex-col justify-between">
-            <div>
-              <div className="mb-4">
-                <div
-                  className="text-4xl sm:text-5xl font-normal tracking-[0.08em] text-white leading-tight"
-                  style={{ fontFamily: "'Vortax', 'Orbitron', 'Audiowide', system-ui, sans-serif" }}
-                >
-                  RCH  TV
-                </div>
-                <div className="text-sm text-zinc-400 font-semibold tracking-wide mt-1">CONSOLE</div>
-              </div>
-              <p className="text-zinc-500 text-xs leading-relaxed">Approve, reject and mark requests as they hit the screen</p>
+          <aside className="rounded-3xl border border-white/10 bg-zinc-900/70 px-5 py-4 flex items-center min-h-0">
+            <div
+              className="text-3xl sm:text-4xl font-normal tracking-[0.08em] text-white leading-none"
+              style={{ fontFamily: "'Vortax', 'Orbitron', 'Audiowide', system-ui, sans-serif" }}
+            >
+              CONSOLE
             </div>
           </aside>
 
-          {/* Right controls grid — always visible: On Air Now + collapse toggle for Options */}
-          <section className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-4 gap-3 items-stretch">
+          {/* Right controls grid — always visible: On Air Now + TV Display */}
+          <section className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-3 items-stretch">
             {/* On Air Now (always visible, prominent) */}
-            <div className="md:col-span-2 2xl:col-span-2 bg-zinc-900/80 border border-white/10 rounded-2xl p-4 flex flex-col justify-between min-h-[132px]">
+            <div className="bg-zinc-900/80 border border-white/10 rounded-2xl p-4 flex flex-col justify-between min-h-[132px]">
               <div className="flex items-center justify-between">
                 <div className="text-[10px] text-zinc-400 uppercase font-mono tracking-wider flex items-center gap-2">
                   <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
@@ -623,7 +617,7 @@ export default function DJAdminPage() {
               )}
             </div>
 
-            {/* TV Display (always visible) */}
+            {/* TV Display (always visible, right column) */}
             <div className="bg-zinc-900 border border-white/10 rounded-2xl p-3.5 flex flex-col justify-between min-h-[132px]">
               <div className="flex items-center justify-between gap-2">
                 <div>
@@ -668,8 +662,8 @@ export default function DJAdminPage() {
               </div>
             </div>
 
-            {/* Collapsible OPTIONS section */}
-            <div className="md:col-span-2 2xl:col-span-4 bg-zinc-900/50 border border-white/10 rounded-2xl overflow-hidden">
+            {/* Collapsible OPTIONS section (full width) */}
+            <div className="lg:col-span-2 bg-zinc-900/50 border border-white/10 rounded-2xl overflow-hidden">
               <button
                 onClick={() => setShowOptions(!showOptions)}
                 className="w-full px-4 py-3 flex items-center justify-between text-xs text-zinc-400 uppercase font-mono hover:bg-white/5 transition"
@@ -680,7 +674,7 @@ export default function DJAdminPage() {
                 </span>
                 <div className="flex items-center gap-3">
                   <span className="text-[9px] text-zinc-500">
-                    {showOptions ? 'collapse' : `${followersCount.toLocaleString()} followers · ${displayDuration >= 60 ? `${displayDuration / 60}m` : `${displayDuration}s`} per item`}
+                    {showOptions ? 'collapse' : `${followersCount.toLocaleString()} followers · ${publicSession ? `session ${publicSession.slice(0, 6)}…` : 'no session'}`}
                   </span>
                   <span className={`text-zinc-500 transition-transform ${showOptions ? 'rotate-180' : ''}`}>▼</span>
                 </div>
@@ -688,63 +682,66 @@ export default function DJAdminPage() {
 
               {showOptions && (
                 <div className="border-t border-white/5 p-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-4">
-                    {/* Session */}
-                    <div className="bg-zinc-900/80 border border-white/10 rounded-2xl p-3.5 flex flex-col gap-3">
-                      <div className="text-[10px] text-zinc-400 uppercase font-mono flex items-center justify-between">
-                        <span>🔑 Session</span>
-                        <span className="text-xs font-bold text-indigo-300 font-mono">{publicSession ? `${publicSession.slice(0, 8)}…` : 'Loading…'}</span>
+                  <div className="flex flex-col 2xl:flex-row gap-4">
+                    {/* Left column: Session, End of Night, IG Followers stacked */}
+                    <div className="flex flex-col gap-3 2xl:w-72 shrink-0">
+                      {/* Session */}
+                      <div className="bg-zinc-900/80 border border-white/10 rounded-2xl p-3.5 flex flex-col gap-3">
+                        <div className="text-[10px] text-zinc-400 uppercase font-mono flex items-center justify-between">
+                          <span>🔑 Session</span>
+                          <span className="text-xs font-bold text-indigo-300 font-mono">{publicSession ? `${publicSession.slice(0, 8)}…` : 'Loading…'}</span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <button
+                            onClick={regeneratePublicSession}
+                            disabled={sessionLoading}
+                            className="py-2 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/20 text-indigo-200 text-[10px] font-semibold rounded-xl transition disabled:opacity-50"
+                          >
+                            {sessionLoading ? '…' : 'New Session'}
+                          </button>
+                          <button
+                            onClick={() => setShowSessionModal(true)}
+                            className="py-2 bg-indigo-500/15 hover:bg-indigo-500/25 border border-indigo-500/30 text-indigo-300 text-[10px] font-semibold rounded-xl transition flex items-center justify-center gap-1"
+                          >
+                            <QrCode className="w-3 h-3" /> QR Code
+                          </button>
+                        </div>
                       </div>
-                      <div className="grid grid-cols-2 gap-2">
+
+                      {/* End of Night */}
+                      <div className="bg-zinc-900/80 border border-white/10 rounded-2xl p-3.5 flex flex-col items-center justify-center gap-2 min-h-[80px]">
                         <button
-                          onClick={regeneratePublicSession}
-                          disabled={sessionLoading}
-                          className="py-2 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/20 text-indigo-200 text-[10px] font-semibold rounded-xl transition disabled:opacity-50"
+                          onClick={() => setShowEndOfNight(true)}
+                          className="w-full py-3 bg-indigo-500/15 hover:bg-indigo-500/25 border border-indigo-500/30 text-indigo-300 text-xs font-semibold rounded-2xl transition flex items-center justify-center gap-2"
                         >
-                          {sessionLoading ? '…' : 'New Session'}
+                          <Moon className="w-4 h-4" /> End of Night
+                        </button>
+                        <div className="text-[9px] text-zinc-500 text-center">Generate social posts from<br />tonight's highlights</div>
+                      </div>
+
+                      {/* IG Followers */}
+                      <div className="bg-zinc-900/80 border border-white/10 rounded-2xl p-3.5 flex flex-col gap-2.5">
+                        <div className="text-[10px] text-zinc-400 uppercase font-mono flex items-center justify-between">
+                          <span>👥 IG Followers DB</span>
+                          <span className="text-[11px] font-bold text-pink-400">{followersCount.toLocaleString()}</span>
+                        </div>
+                        <button
+                          onClick={() => setShowUploadModal(true)}
+                          className="w-full py-2 bg-pink-500/15 hover:bg-pink-500/25 border border-pink-500/30 text-pink-300 text-[10px] font-semibold rounded-xl transition flex items-center justify-center gap-1.5"
+                        >
+                          <AtSign className="w-3 h-3" /> Upload Dump
                         </button>
                         <button
-                          onClick={() => setShowSessionModal(true)}
-                          className="py-2 bg-indigo-500/15 hover:bg-indigo-500/25 border border-indigo-500/30 text-indigo-300 text-[10px] font-semibold rounded-xl transition flex items-center justify-center gap-1"
+                          onClick={() => setShowAddHandleModal(true)}
+                          className="w-full py-2 bg-green-500/15 hover:bg-green-500/25 border border-green-500/30 text-green-300 text-[10px] font-semibold rounded-xl transition flex items-center justify-center gap-1.5"
                         >
-                          <QrCode className="w-3 h-3" /> QR Code
+                          <AtSign className="w-3 h-3" /> Add Handle Manually
                         </button>
                       </div>
                     </div>
 
-                    {/* End of Night (separate card) */}
-                    <div className="bg-zinc-900/80 border border-white/10 rounded-2xl p-3.5 flex flex-col items-center justify-center gap-2 min-h-[100px]">
-                      <button
-                        onClick={() => setShowEndOfNight(true)}
-                        className="w-full py-3 bg-indigo-500/15 hover:bg-indigo-500/25 border border-indigo-500/30 text-indigo-300 text-xs font-semibold rounded-2xl transition flex items-center justify-center gap-2"
-                      >
-                        <Moon className="w-4 h-4" /> End of Night
-                      </button>
-                      <div className="text-[9px] text-zinc-500 text-center">Generate social posts from<br />tonight's highlights</div>
-                    </div>
-
-                    {/* IG Followers (stacked vertically) */}
-                    <div className="bg-zinc-900/80 border border-white/10 rounded-2xl p-3.5 flex flex-col gap-2.5">
-                      <div className="text-[10px] text-zinc-400 uppercase font-mono flex items-center justify-between">
-                        <span>👥 IG Followers DB</span>
-                        <span className="text-[11px] font-bold text-pink-400">{followersCount.toLocaleString()}</span>
-                      </div>
-                      <button
-                        onClick={() => setShowUploadModal(true)}
-                        className="w-full py-2 bg-pink-500/15 hover:bg-pink-500/25 border border-pink-500/30 text-pink-300 text-[10px] font-semibold rounded-xl transition flex items-center justify-center gap-1.5"
-                      >
-                        <AtSign className="w-3 h-3" /> Upload Dump
-                      </button>
-                      <button
-                        onClick={() => setShowAddHandleModal(true)}
-                        className="w-full py-2 bg-green-500/15 hover:bg-green-500/25 border border-green-500/30 text-green-300 text-[10px] font-semibold rounded-xl transition flex items-center justify-center gap-1.5"
-                      >
-                        <AtSign className="w-3 h-3" /> Add Handle Manually
-                      </button>
-                    </div>
-
-                    {/* Wall of Fame Settings (wider - spans 2 columns) */}
-                    <div className="bg-zinc-900/80 border border-white/10 rounded-2xl p-3.5 md:col-span-2 2xl:col-span-2">
+                    {/* Right: Wall of Fame (takes remaining width) */}
+                    <div className="flex-1 bg-zinc-900/80 border border-white/10 rounded-2xl p-3.5">
                       <div className="text-[10px] text-zinc-400 uppercase font-mono mb-3">📸 Wall of Fame</div>
                       <div className="flex flex-col gap-2.5">
                         <div className="flex items-center gap-3">
