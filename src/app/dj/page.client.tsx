@@ -114,6 +114,10 @@ export default function DJAdminPage() {
   const [fameTitleOffset, setFameTitleOffset] = useState(22);
   const [fameDisplayOffset, setFameDisplayOffset] = useState(0);
   const [fameCompletedFade, setFameCompletedFade] = useState(70);
+  const [shoutoutRotation, setShoutoutRotation] = useState(5);
+  const [songRotation, setSongRotation] = useState(5);
+  const [tvWobbleSeconds, setTvWobbleSeconds] = useState(0);
+  const [thankYouTwitchEnabled, setThankYouTwitchEnabled] = useState(false);
   const [showEndOfNight, setShowEndOfNight] = useState(false);
   const [showOptions, setShowOptions] = useState(false);
   // Manual entry modals
@@ -231,6 +235,10 @@ export default function DJAdminPage() {
         if (s.fame_title_offset) setFameTitleOffset(parseInt(s.fame_title_offset, 10));
         if (s.fame_display_offset !== undefined) setFameDisplayOffset(parseInt(s.fame_display_offset, 10));
         if (s.fame_completed_fade) setFameCompletedFade(parseInt(s.fame_completed_fade, 10));
+        if (s.shoutout_rotation !== undefined) setShoutoutRotation(parseInt(s.shoutout_rotation, 10));
+        if (s.song_rotation !== undefined) setSongRotation(parseInt(s.song_rotation, 10));
+        if (s.tv_card_wobble_seconds !== undefined) setTvWobbleSeconds(parseInt(s.tv_card_wobble_seconds, 10) || 0);
+        if (s.thank_you_twitch_enabled !== undefined) setThankYouTwitchEnabled(s.thank_you_twitch_enabled === 'true');
         if (s.tv_hide_background !== undefined) setHideBackground(s.tv_hide_background === 'true');
         if (s.tv_hide_idle_screen !== undefined) setHideIdleScreen(s.tv_hide_idle_screen === 'true');
       }
@@ -797,6 +805,47 @@ export default function DJAdminPage() {
                             <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-transform ${hideIdleScreen ? 'translate-x-[18px]' : 'translate-x-0.5'}`} />
                           </button>
                         </div>
+                        <div className="pt-1 border-t border-white/5">
+                          <div className="flex items-center justify-between mb-1.5">
+                            <span className="text-[10px] text-zinc-400">Wobble live cards</span>
+                            <span className="text-[10px] text-purple-300 font-mono">{tvWobbleSeconds === 0 ? 'Off' : `${tvWobbleSeconds}s`}</span>
+                          </div>
+                          <input
+                            type="range"
+                            min={0}
+                            max={30}
+                            step={1}
+                            value={tvWobbleSeconds}
+                            onChange={(e) => setTvWobbleSeconds(parseInt(e.target.value, 10))}
+                            onMouseUp={async () => { await fetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tv_card_wobble_seconds: String(tvWobbleSeconds) }) }); }}
+                            onTouchEnd={async () => { await fetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tv_card_wobble_seconds: String(tvWobbleSeconds) }) }); }}
+                            className="w-full accent-purple-400 h-5"
+                          />
+                          <div className="text-[8px] text-zinc-600">0 = off · replays on live shoutout and song cards</div>
+                        </div>
+                      </div>
+
+                      {/* Thank-you page */}
+                      <div className="bg-zinc-900/80 border border-white/10 rounded-2xl p-3.5 flex flex-col gap-2">
+                        <div className="text-[10px] text-zinc-400 uppercase font-mono">📺 Thank-you page</div>
+                        <div className="flex items-center justify-between gap-3">
+                          <span className="text-[10px] text-zinc-400">Show Jakarl DJ Twitch</span>
+                          <button
+                            onClick={async () => {
+                              const next = !thankYouTwitchEnabled;
+                              setThankYouTwitchEnabled(next);
+                              await fetch('/api/settings', {
+                                method: 'PUT',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ thank_you_twitch_enabled: String(next) }),
+                              });
+                            }}
+                            className={`relative w-9 h-5 rounded-full transition-colors ${thankYouTwitchEnabled ? 'bg-purple-500' : 'bg-zinc-700'}`}
+                            aria-label="Toggle Twitch stream on thank-you pages"
+                          >
+                            <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-transform ${thankYouTwitchEnabled ? 'translate-x-[18px]' : 'translate-x-0.5'}`} />
+                          </button>
+                        </div>
                       </div>
                     </div>
 
@@ -866,6 +915,25 @@ export default function DJAdminPage() {
                             onTouchEnd={async () => { await fetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fame_completed_fade: String(fameCompletedFade) }) }); }}
                             className="flex-1 accent-pink-500 h-6" />
                           <span className="text-[10px] text-pink-400 font-mono w-8 text-right">{fameCompletedFade}%</span>
+                        </div>
+                        <div className="text-[9px] text-zinc-500 mt-1">Controls random ±° rotation applied to TV shoutout bubbles and song request deck cards.</div>
+                        <div className="flex items-center gap-3">
+                          <label className="text-[9px] text-zinc-500 w-20 shrink-0">Shoutout ±°</label>
+                          <input type="range" min={0} max={15} step={1} value={shoutoutRotation}
+                            onChange={(e) => setShoutoutRotation(parseInt(e.target.value, 10))}
+                            onMouseUp={async () => { await fetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ shoutout_rotation: String(shoutoutRotation) }) }); }}
+                            onTouchEnd={async () => { await fetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ shoutout_rotation: String(shoutoutRotation) }) }); }}
+                            className="flex-1 accent-purple-400 h-6" />
+                          <span className="text-[10px] text-purple-300 font-mono w-8 text-right">±{shoutoutRotation}°</span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <label className="text-[9px] text-zinc-500 w-20 shrink-0">Song ±°</label>
+                          <input type="range" min={0} max={15} step={1} value={songRotation}
+                            onChange={(e) => setSongRotation(parseInt(e.target.value, 10))}
+                            onMouseUp={async () => { await fetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ song_rotation: String(songRotation) }) }); }}
+                            onTouchEnd={async () => { await fetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ song_rotation: String(songRotation) }) }); }}
+                            className="flex-1 accent-amber-400 h-6" />
+                          <span className="text-[10px] text-amber-300 font-mono w-8 text-right">±{songRotation}°</span>
                         </div>
                       </div>
                     </div>
@@ -996,12 +1064,12 @@ export default function DJAdminPage() {
               <div className="space-y-3">
                 <div>
                   <label className="text-[10px] text-zinc-400 uppercase font-mono block mb-1">Message</label>
-                  <input
-                    type="text"
+                  <textarea
+                    rows={2}
                     value={manualShoutout.message}
                     onChange={(e) => setManualShoutout({ ...manualShoutout, message: e.target.value })}
                     placeholder="Happy Birthday!"
-                    className="w-full bg-black border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder:text-zinc-600"
+                    className="w-full min-h-[4.5rem] bg-black border border-white/10 rounded-xl px-3 py-2 text-sm leading-snug text-white placeholder:text-zinc-600 resize-none"
                   />
                 </div>
                 <div>

@@ -23,3 +23,18 @@
 }
 
 @import "tailwindcss";
+
+@keyframes tv-card-wobble {
+  0%, 100% { transform: rotate(var(--tv-rest-rotation, 0deg)) scale(1); }
+  20% { transform: rotate(calc(var(--tv-rest-rotation, 0deg) - 1.8deg)) scale(1.01); }
+  45% { transform: rotate(calc(var(--tv-rest-rotation, 0deg) + 1.8deg)) scale(1.01); }
+  70% { transform: rotate(calc(var(--tv-rest-rotation, 0deg) - 0.8deg)) scale(1.005); }
+}
+
+.tv-card-wobble {
+  animation: tv-card-wobble 800ms ease-in-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tv-card-wobble { animation: none; }
+}

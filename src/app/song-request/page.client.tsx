@@ -5,6 +5,7 @@ import { ArrowLeft, Music, Clock, CheckCircle2, XCircle, Loader2, ChevronDown, A
 import Link from 'next/link';
 import { useRotatingPlaceholder, markInputUsed } from '@/lib/useRotatingPlaceholder';
 import { getStoredPublicSession, useRequireValidSession } from '@/lib/useSessionGuard';
+import TwitchThankYouPlayer from '@/components/TwitchThankYouPlayer';
 
 const ARTIST_SAMPLES = [
   'Rufus Du Sol',
@@ -60,6 +61,7 @@ export default function SongRequestPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [showThankYouTwitch, setShowThankYouTwitch] = useState(false);
   const artistPlaceholder = useRotatingPlaceholder(ARTIST_SAMPLES, artist);
   const titlePlaceholder = useRotatingPlaceholder(TITLE_SAMPLES, title);
   const namePlaceholder = useRotatingPlaceholder(NAME_SAMPLES, requesterName);
@@ -70,6 +72,13 @@ export default function SongRequestPage() {
     fetchRequests();
     const interval = setInterval(fetchRequests, 15000);
     return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    fetch('/api/settings', { cache: 'no-store' })
+      .then(res => res.ok ? res.json() : null)
+      .then(settings => setShowThankYouTwitch(settings?.thank_you_twitch_enabled === 'true'))
+      .catch(() => {});
   }, []);
 
   const fetchRequests = async () => {
@@ -279,8 +288,8 @@ export default function SongRequestPage() {
 
       {/* Thank You overlay */}
       {submitted && (
-        <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-6">
-          <div className="bg-zinc-900 border border-white/10 rounded-3xl max-w-sm w-full p-6 text-center shadow-2xl">
+        <div className="fixed inset-0 bg-black/90 flex items-center justify-center overflow-y-auto z-50 p-6">
+          <div className="bg-zinc-900 border border-white/10 rounded-3xl max-w-md w-full max-h-full overflow-y-auto p-6 text-center shadow-2xl">
             {/* Instagram handle at top */}
             <div className="mb-5">
               <div className="inline-flex items-center gap-2 bg-gradient-to-r from-amber-500/20 to-yellow-500/20 border border-amber-500/30 rounded-full px-4 py-2">
@@ -312,6 +321,13 @@ export default function SongRequestPage() {
                 <span className="font-semibold text-white">Show this screen to the DJ</span> to increase your chances of getting approved!
               </p>
             </div>
+
+            {showThankYouTwitch && (
+              <div className="mb-5 text-left">
+                <div className="text-[10px] uppercase tracking-widest text-amber-300 mb-2">Live from @jakarl_dj</div>
+                <TwitchThankYouPlayer />
+              </div>
+            )}
 
             <button
               onClick={() => { window.location.href = '/dashboard'; }}

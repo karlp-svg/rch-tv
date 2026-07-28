@@ -312,9 +312,9 @@ function generateSongsPost(items: SongItem[], tagline: string): string {
     const jitter = (i % 2 === 0 ? -1 : 1) * (16 + (i * 7) % 22);
     const cx = W / 2 - (item.requesterName ? 72 : 0) + jitter;
     const cy = areaTop + slot * i + slot / 2;
-    // Stronger varied rotation: 4° to 10° alternating sign.
+    // Increased rotation spread for more visible card tilt.
     const rotSign = i % 2 === 0 ? -1 : 1;
-    const rotDeg = (4 + (i % 7)) * rotSign;
+    const rotDeg = (6 + (i % 7) * 1.5) * rotSign;
     const rot = rotDeg * (Math.PI / 180);
 
     ctx.save();
@@ -377,7 +377,8 @@ function generateSongsPost(items: SongItem[], tagline: string): string {
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
 
-    // FLIPPED positions: Artist on top (large Montserrat bold), Title below (Permanent Marker / cursive styling)
+    // Artist on top (large Montserrat bold), Title below (Permanent Marker / cursive styling)
+    // When the user toggled "Anything", only show the artist — no extra title line.
     ctx.font = "700 42px 'Montserrat', sans-serif";
     ctx.fillStyle = '#ffffff';
     let artistOnly = artistText;
@@ -386,11 +387,7 @@ function generateSongsPost(items: SongItem[], tagline: string): string {
     }
     ctx.fillText(artistOnly, textX, -16);
 
-    if (item.anyTitle) {
-      ctx.font = "400 32px 'Permanent Marker', cursive";
-      ctx.fillStyle = accent; // themed color for anything goes!
-      ctx.fillText('Anything', textX, 24);
-    } else {
+    if (!item.anyTitle && titleText) {
       ctx.font = "400 32px 'Permanent Marker', cursive";
       ctx.fillStyle = '#e4e4e7';
       let tTitle = titleText;
@@ -400,24 +397,16 @@ function generateSongsPost(items: SongItem[], tagline: string): string {
       ctx.fillText(tTitle, textX, 24);
     }
 
-    ctx.restore();
-
-    // Stack requester name and Instagram handle beneath the bubble, aligned left.
-    const metaLeft = -bubbleW / 2 + 18;
-    const metaTop = bubbleH / 2 + 8;
-
+    // Requested by text on the card itself (bottom-left of the card).
     if (item.requesterName) {
-      ctx.save();
-      ctx.translate(cx, cy);
-      ctx.rotate(rot);
       ctx.font = "400 24px 'Caveat', cursive";
       ctx.fillStyle = 'rgba(255,255,255,0.78)';
       ctx.textAlign = 'left';
-      ctx.textBaseline = 'top';
-      ctx.fillText(`requested by ${item.requesterName}`, metaLeft, metaTop);
-      ctx.restore();
+      ctx.textBaseline = 'middle';
+      ctx.fillText(`requested by ${item.requesterName}`, -bubbleW / 2 + 120, bubbleH / 2 - 24);
     }
 
+    // Instagram handle bottom-right of the card, half over the bottom edge.
     if (item.showHandleOnTv && item.instagramHandle) {
       const cleanHandle = item.instagramHandle.replace(/^@+/, '').trim();
       const stickerFontSize = 18;
@@ -430,13 +419,12 @@ function generateSongsPost(items: SongItem[], tagline: string): string {
       const stickerW = iconSize + stickerGap + stickerTextW + stickerPadX * 2;
       const stickerH = Math.max(iconSize, stickerFontSize) + stickerPadY * 2;
 
-      // If requester exists, place handle directly below it; otherwise start at first metadata row.
-      const localStickerX = metaLeft + stickerW / 2;
-      const localStickerY = metaTop + (item.requesterName ? 32 : 0) + stickerH / 2;
-      const stickerRadX = cx + localStickerX * Math.cos(rot) - localStickerY * Math.sin(rot);
-      const stickerRadY = cy + localStickerX * Math.sin(rot) + localStickerY * Math.cos(rot);
-      drawHandleSticker(ctx, stickerRadX, stickerRadY, cleanHandle, stickerFontSize, rotDeg);
+      const stickerX = bubbleW / 2 - stickerW / 2 - 18;
+      const stickerY = bubbleH / 2 + 2;
+      drawHandleSticker(ctx, stickerX, stickerY, cleanHandle, stickerFontSize, rotDeg);
     }
+
+    ctx.restore();
   });
 
   drawFooter(ctx, tagline);
@@ -485,7 +473,7 @@ function generateShoutoutsPost(items: ShoutItem[], tagline: string): string {
 
     const cx = W/2 + side * (35 + (i * 13) % 50);
     const cy = areaTop + slot * i + slot/2;
-    const rotDeg = side * (1.5 + (i % 3) * 0.6);
+    const rotDeg = side * (3.0 + (i % 3) * 0.8);
     const rot = rotDeg * (Math.PI / 180);
 
     ctx.save();
@@ -651,10 +639,8 @@ async function generatePhotosPost(items: PhotoItem[], tagline: string): Promise<
       ctx.fillText(text, -cardW / 2 + frame * 1.25, cardH / 2 - bottomH * 0.45);
     }
 
-    // Handle bottom-right, half over the card edge, matching the latest TV/polaroid placement.
-    if (item.showHandleOnTv && item.instagramHandle) {
-      drawHandleSticker(ctx, cardW / 2 - frame * 2.1, cardH / 2, item.instagramHandle, Math.max(16, Math.round(cardW * 0.055)), 0);
-    }
+    // Instagram handle sticker intentionally omitted for Wall of Fame posts —
+    // the handle is already drawn on the polaroid itself.
 
     ctx.restore();
   });

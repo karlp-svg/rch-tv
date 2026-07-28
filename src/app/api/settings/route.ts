@@ -15,6 +15,10 @@ const DEFAULTS: Record<string, string> = {
   fame_title_offset: '22',
   fame_display_offset: '0',
   fame_completed_fade: '70',
+  shoutout_rotation: '5',
+  song_rotation: '5',
+  tv_card_wobble_seconds: '0',
+  thank_you_twitch_enabled: 'false',
   tv_hide_background: 'false',
   tv_hide_idle_screen: 'false',
 };

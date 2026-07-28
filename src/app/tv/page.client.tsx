@@ -40,6 +40,10 @@ export default function TVPage() {
   const [fameSettings, setFameSettings] = useState<FameSettings>(DEFAULT_FAME_SETTINGS);
   const [hideBackground, setHideBackground] = useState<boolean>(false);
   const [hideIdleScreen, setHideIdleScreen] = useState<boolean>(false);
+  const [shoutoutRotationState, setShoutoutRotationState] = useState<number>(5);
+  const [songRotationState, setSongRotationState] = useState<number>(5);
+  const [wobbleSeconds, setWobbleSeconds] = useState<number>(0);
+  const [wobbling, setWobbling] = useState(false);
   const [publicQr, setPublicQr] = useState<string>('');
   const [publicSession, setPublicSession] = useState<string>('');
 
@@ -82,6 +86,9 @@ export default function TVPage() {
             if (s) {
               if (s.tv_hide_background !== undefined) setHideBackground(s.tv_hide_background === 'true');
               if (s.tv_hide_idle_screen !== undefined) setHideIdleScreen(s.tv_hide_idle_screen === 'true');
+              if (s.shoutout_rotation !== undefined) setShoutoutRotationState(parseInt(s.shoutout_rotation, 10));
+              if (s.song_rotation !== undefined) setSongRotationState(parseInt(s.song_rotation, 10));
+              if (s.tv_card_wobble_seconds !== undefined) setWobbleSeconds(parseInt(s.tv_card_wobble_seconds, 10) || 0);
             }
           })
           .catch(() => {});
@@ -129,6 +136,27 @@ export default function TVPage() {
     return () => clearInterval(poll);
   }, []);
 
+  // Optional timed wobble for the live shoutout bubble / song deck card.
+  useEffect(() => {
+    if (!currentItem || (currentItem.type !== 'shoutout' && currentItem.type !== 'song') || wobbleSeconds <= 0) {
+      setWobbling(false);
+      return;
+    }
+    let resetTimer: ReturnType<typeof setTimeout> | undefined;
+    const runWobble = () => {
+      setWobbling(false);
+      requestAnimationFrame(() => {
+        setWobbling(true);
+        resetTimer = setTimeout(() => setWobbling(false), 850);
+      });
+    };
+    const interval = setInterval(runWobble, wobbleSeconds * 1000);
+    return () => {
+      clearInterval(interval);
+      if (resetTimer) clearTimeout(resetTimer);
+    };
+  }, [currentItem?.id, currentItem?.type, wobbleSeconds]);
+
   if (!currentItem) {
     // If hide idle screen is on, show nothing
     if (hideIdleScreen) {
@@ -171,8 +199,8 @@ export default function TVPage() {
           fading ? 'opacity-0' : 'opacity-100'
         }`}
       >
-        {currentItem.type === 'shoutout' && <ShoutoutView item={currentItem} hideBackground={hideBackground} />}
-        {currentItem.type === 'song' && <SongView item={currentItem} hideBackground={hideBackground} />}
+        {currentItem.type === 'shoutout' && <ShoutoutView item={currentItem} hideBackground={hideBackground} rotationRange={shoutoutRotationState} wobbling={wobbling} />}
+        {currentItem.type === 'song' && <SongView item={currentItem} hideBackground={hideBackground} rotationRange={songRotationState} wobbling={wobbling} />}
         {currentItem.type === 'fame' && <FameView item={currentItem} completedFame={completedFame} fameSettings={fameSettings} hideBackground={hideBackground} />}
       </div>
     </main>
@@ -224,10 +252,10 @@ function HandleSticker({
   );
 }
 
-function ShoutoutView({ item, hideBackground }: { item: Extract<TVItem, { type: 'shoutout' }>; hideBackground?: boolean }) {
-  // Deterministic slight rotation, same spirit as the End of Night bubbles (1.5°–2.7°)
-  const side = item.id % 2 === 0 ? -1 : 1;
-  const rotDeg = side * (1.5 + (item.id % 3) * 0.6);
+function ShoutoutView({ item, hideBackground, rotationRange, wobbling }: { item: Extract<TVItem, { type: 'shoutout' }>; hideBackground?: boolean; rotationRange: number; wobbling: boolean }) {
+  // Deterministic but varied angle, distributed inside the DJ-selected ± range.
+  const seeded = ((item.id * 97) % 1000) / 999;
+  const rotDeg = (seeded * 2 - 1) * Math.max(0, rotationRange);
   const bubbleFill = item.id % 2 === 0 ? '#f3e8ff' : '#e9d5ff';
 
   return (
@@ -254,11 +282,15 @@ function ShoutoutView({ item, hideBackground }: { item: Extract<TVItem, { type: 
       {/* Speech bubble — End of Night style: flat purple fill, tail angled out to the LEFT */}
       <div className="relative w-full max-w-[64rem] mx-auto">
         <div
-          className="relative rounded-[2rem] px-14 py-12 shadow-[0_20px_60px_rgba(0,0,0,0.5)]"
-          style={{ background: bubbleFill, transform: `rotate(${rotDeg}deg)` }}
+          className={`relative rounded-[2rem] px-14 py-12 shadow-[0_20px_60px_rgba(0,0,0,0.5)] ${wobbling ? 'tv-card-wobble' : ''}`}
+          style={{
+            background: bubbleFill,
+            transform: `rotate(${rotDeg}deg)`,
+            '--tv-rest-rotation': `${rotDeg}deg`,
+          } as React.CSSProperties}
         >
           <div
-            className="text-center leading-tight"
+            className="text-center leading-tight whitespace-pre-line"
             style={{ fontFamily: "'Gochi Hand', 'Permanent Marker', cursive", fontSize: 'clamp(2rem, 5vw, 4.25rem)', color: '#2a0845' }}
           >
             &ldquo;{item.message}&rdquo;
@@ -296,9 +328,11 @@ function ShoutoutView({ item, hideBackground }: { item: Extract<TVItem, { type: 
 // Accent palette used by the End of Night songs post
 const SONG_ACCENTS = ['#1DB954', '#FF4A00', '#F7E600', '#A259FF', '#00C8F0', '#FF69B4'];
 
-function SongView({ item, hideBackground }: { item: Extract<TVItem, { type: 'song' }>; hideBackground?: boolean }) {
+function SongView({ item, hideBackground, rotationRange, wobbling }: { item: Extract<TVItem, { type: 'song' }>; hideBackground?: boolean; rotationRange: number; wobbling: boolean }) {
   const accent = SONG_ACCENTS[item.id % SONG_ACCENTS.length];
-  const rotDeg = (item.id % 2 === 0 ? -1 : 1) * (1.5 + (item.id % 3) * 0.5);
+  // Deterministic but varied angle, distributed inside the DJ-selected ± range.
+  const seeded = ((item.id * 193) % 1000) / 999;
+  const rotDeg = (seeded * 2 - 1) * Math.max(0, rotationRange);
   // Waveform bar heights from the End of Night template
   const waveHeights = [18, 34, 52, 38, 24];
 
@@ -330,12 +364,13 @@ function SongView({ item, hideBackground }: { item: Extract<TVItem, { type: 'son
       {/* Song player card — End of Night template */}
       <div className="relative w-full max-w-[64rem] mx-auto">
         <div
-          className="relative rounded-[2rem] shadow-[0_22px_60px_rgba(0,0,0,0.65)]"
+          className={`relative rounded-[2rem] shadow-[0_22px_60px_rgba(0,0,0,0.65)] ${wobbling ? 'tv-card-wobble' : ''}`}
           style={{
             background: `linear-gradient(90deg, #111217 0%, #20212a 72%, ${accent} 100%)`,
             transform: `rotate(${rotDeg}deg)`,
+            '--tv-rest-rotation': `${rotDeg}deg`,
             padding: 'clamp(1.75rem, 3vw, 3rem) clamp(1.5rem, 2.5vw, 2.5rem)',
-          }}
+          } as React.CSSProperties}
         >
           {/* Accent rail */}
           <div

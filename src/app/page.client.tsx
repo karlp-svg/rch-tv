@@ -128,7 +128,7 @@ export default function LandingClient() {
 
             <div className="text-center mb-5">
               <div className="text-xl font-semibold mb-1">Follow @jakarl_dj</div>
-              <div className="text-purple-300 text-xs">on Instagram to use RCH TV apps</div>
+              <div className="text-purple-300 text-xs">on Instagram to use RCH TV App</div>
             </div>
 
             {sessionChecking ? (

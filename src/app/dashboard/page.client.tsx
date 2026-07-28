@@ -25,7 +25,12 @@ export default function DashboardClient() {
 
         {/* Title */}
         <div className="text-center shrink-0 mb-6">
-          <div className="text-4xl mb-2">🎧</div>
+          <div
+            className="text-4xl sm:text-5xl font-normal tracking-[0.08em] text-transparent bg-clip-text bg-gradient-to-br from-emerald-300 via-green-400 to-emerald-600 whitespace-pre mb-2"
+            style={{ fontFamily: "'Vortax', 'Orbitron', 'Audiowide', sans-serif" }}
+          >
+            RCH  TV
+          </div>
           <h1 className="text-3xl font-bold tracking-tighter mb-1">Take Over the Screen</h1>
           <p className="text-zinc-400 text-xs">Choose an option</p>
         </div>

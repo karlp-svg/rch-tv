@@ -5,6 +5,7 @@ import { ArrowLeft, Send, Clock, CheckCircle2, XCircle, Loader2, ChevronDown, At
 import Link from 'next/link';
 import { useRotatingPlaceholder, markInputUsed } from '@/lib/useRotatingPlaceholder';
 import { getStoredPublicSession, useRequireValidSession } from '@/lib/useSessionGuard';
+import TwitchThankYouPlayer from '@/components/TwitchThankYouPlayer';
 
 const MESSAGE_SAMPLES = [
   'Happy Birthday Sarah! 🔥',
@@ -47,6 +48,7 @@ export default function ShoutoutPage() {
   const [shoutouts, setShoutouts] = useState<Shoutout[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [showThankYouTwitch, setShowThankYouTwitch] = useState(false);
   const messagePlaceholder = useRotatingPlaceholder(MESSAGE_SAMPLES, message);
   const fromPlaceholder = useRotatingPlaceholder(FROM_SAMPLES, fromName);
 
@@ -56,6 +58,13 @@ export default function ShoutoutPage() {
     fetchShoutouts();
     const interval = setInterval(fetchShoutouts, 15000);
     return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    fetch('/api/settings', { cache: 'no-store' })
+      .then(res => res.ok ? res.json() : null)
+      .then(settings => setShowThankYouTwitch(settings?.thank_you_twitch_enabled === 'true'))
+      .catch(() => {});
   }, []);
 
   const fetchShoutouts = async () => {
@@ -124,7 +133,8 @@ export default function ShoutoutPage() {
             <textarea
               value={message}
               onChange={(e) => { setMessage(e.target.value); markInputUsed(); }}
-              className="w-full h-24 bg-black border border-white/10 focus:border-purple-500 rounded-2xl p-4 text-base placeholder:text-zinc-600 resize-none focus:outline-none"
+              rows={2}
+              className="w-full min-h-[5.5rem] bg-black border border-white/10 focus:border-purple-500 rounded-2xl p-4 text-base leading-snug placeholder:text-zinc-600 resize-none focus:outline-none"
               placeholder={messagePlaceholder}
               maxLength={140}
               required
@@ -225,8 +235,8 @@ export default function ShoutoutPage() {
 
       {/* Thank You overlay */}
       {submitted && (
-        <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-6">
-          <div className="bg-zinc-900 border border-white/10 rounded-3xl max-w-sm w-full p-6 text-center shadow-2xl">
+        <div className="fixed inset-0 bg-black/90 flex items-center justify-center overflow-y-auto z-50 p-6">
+          <div className="bg-zinc-900 border border-white/10 rounded-3xl max-w-md w-full max-h-full overflow-y-auto p-6 text-center shadow-2xl">
             {/* Instagram handle at top */}
             <div className="mb-5">
               <div className="inline-flex items-center gap-2 bg-gradient-to-r from-pink-500/20 to-purple-500/20 border border-pink-500/30 rounded-full px-4 py-2">
@@ -258,6 +268,13 @@ export default function ShoutoutPage() {
                 <span className="font-semibold text-white">Show this screen to the DJ</span> to increase your chances of getting approved!
               </p>
             </div>
+
+            {showThankYouTwitch && (
+              <div className="mb-5 text-left">
+                <div className="text-[10px] uppercase tracking-widest text-purple-300 mb-2">Live from @jakarl_dj</div>
+                <TwitchThankYouPlayer />
+              </div>
+            )}
 
             <button
               onClick={() => { window.location.href = '/dashboard'; }}
