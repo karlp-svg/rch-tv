@@ -130,6 +130,24 @@ export default function DJAdminPage() {
   const [showSessionModal, setShowSessionModal] = useState(false);
   const [sessionLoading, setSessionLoading] = useState(false);
 
+  const getDJAuthHeaders = (): Record<string, string> => {
+    if (typeof window === 'undefined') return {};
+    try {
+      const stored = localStorage.getItem('rch_tv_dj_auth');
+      if (stored) return { Authorization: stored };
+    } catch {}
+    return {};
+  };
+
+  const djFetch = async (url: string, init: RequestInit = {}) => {
+    const auth = getDJAuthHeaders();
+    const mergedHeaders: Record<string, string> = {
+      ...(init.headers as Record<string, string> | undefined),
+      ...auth,
+    };
+    return fetch(url, { ...init, headers: mergedHeaders });
+  };
+
   useEffect(() => {
     fetchData();
     fetchFollowersCount();
@@ -145,7 +163,7 @@ export default function DJAdminPage() {
     if (!currentAction) return;
     try {
       if (countdownRef.current) clearInterval(countdownRef.current);
-      await fetch('/api/admin', {
+      await djFetch('/api/admin', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -173,7 +191,7 @@ export default function DJAdminPage() {
           // Fire-and-forget complete+promote
           void (async () => {
             try {
-              await fetch('/api/admin', {
+              await djFetch('/api/admin', {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -223,7 +241,7 @@ export default function DJAdminPage() {
 
   const fetchSettings = async () => {
     try {
-      const res = await fetch('/api/settings');
+      const res = await djFetch('/api/settings');
       if (res.ok) {
         const s = await res.json();
         if (s.display_duration) setDisplayDuration(parseInt(s.display_duration, 10));
@@ -252,7 +270,7 @@ export default function DJAdminPage() {
 
   const fetchPublicSession = async () => {
     try {
-      const res = await fetch('/api/admin/session', { cache: 'no-store' });
+      const res = await djFetch('/api/admin/session', { cache: 'no-store' });
       if (!res.ok) return;
       const data = await res.json();
       const session = data.session || '';
@@ -267,7 +285,7 @@ export default function DJAdminPage() {
   const regeneratePublicSession = async () => {
     setSessionLoading(true);
     try {
-      const res = await fetch('/api/admin/session', { method: 'POST' });
+      const res = await djFetch('/api/admin/session', { method: 'POST' });
       if (!res.ok) return;
       const data = await res.json();
       const session = data.session || '';
@@ -282,7 +300,7 @@ export default function DJAdminPage() {
   const updateDisplayDuration = async (secs: number) => {
     setDisplayDuration(secs);
     try {
-      await fetch('/api/settings', {
+      await djFetch('/api/settings', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ display_duration: String(secs) }),
@@ -293,7 +311,7 @@ export default function DJAdminPage() {
   const updateHideBackground = async (hide: boolean) => {
     setHideBackground(hide);
     try {
-      await fetch('/api/settings', {
+      await djFetch('/api/settings', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tv_hide_background: String(hide) }),
@@ -349,7 +367,7 @@ export default function DJAdminPage() {
 
   const handleVerifyFollower = async (handle: string) => {
     try {
-      const res = await fetch('/api/admin/add-handle', {
+      const res = await djFetch('/api/admin/add-handle', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ handle }),
@@ -374,7 +392,7 @@ export default function DJAdminPage() {
       // Clean the handle (remove @ if present)
       const cleanHandle = manualHandle.trim().replace(/^@/, '');
       
-      const res = await fetch('/api/admin/add-handle', {
+      const res = await djFetch('/api/admin/add-handle', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ handle: cleanHandle }),
@@ -399,7 +417,7 @@ export default function DJAdminPage() {
 
   const fetchFollowersCount = async () => {
     try {
-      const res = await fetch('/api/admin/followers', { cache: 'no-store' });
+      const res = await djFetch('/api/admin/followers', { cache: 'no-store' });
       if (res.ok) {
         const d = await res.json();
         setFollowersCount(d.count || 0);
@@ -420,7 +438,7 @@ export default function DJAdminPage() {
         payload = { dump: parsed };
       } catch (_) {}
 
-      const res = await fetch('/api/admin/followers', {
+      const res = await djFetch('/api/admin/followers', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -443,7 +461,7 @@ export default function DJAdminPage() {
   const fetchData = async () => {
     try {
       setLoadError(null);
-      const res = await fetch('/api/admin', { cache: 'no-store' });
+      const res = await djFetch('/api/admin', { cache: 'no-store' });
       if (res.ok) {
         setData(await res.json());
       } else {
@@ -467,20 +485,20 @@ export default function DJAdminPage() {
     try {
       if (status === 'in_progress_force') {
         // Force queued item to go live on TV now
-        await fetch('/api/admin', {
+        await djFetch('/api/admin', {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ type, id, status: 'in_progress' }),
         });
       } else if (status === 'in_progress') {
         // Smart approve: if TV is empty -> in_progress; if TV active -> queued
-        await fetch('/api/admin', {
+        await djFetch('/api/admin', {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ action: 'approve', type, id }),
         });
       } else {
-        await fetch('/api/admin', {
+        await djFetch('/api/admin', {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ type, id, status }),
@@ -495,7 +513,7 @@ export default function DJAdminPage() {
 
   const deleteItem = async (type: Tab, id: number) => {
     if (!confirm('Delete this permanently?')) return;
-    await fetch('/api/admin', {
+    await djFetch('/api/admin', {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ type, id }),
@@ -508,7 +526,7 @@ export default function DJAdminPage() {
     if (!confirm(`Delete ALL ${label}? This cannot be undone.`)) return;
     setDeletingAll(true);
     try {
-      await fetch('/api/admin', {
+      await djFetch('/api/admin', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ type: tab, deleteAll: true }),
@@ -794,7 +812,7 @@ export default function DJAdminPage() {
                             onClick={async () => {
                               const next = !hideIdleScreen;
                               setHideIdleScreen(next);
-                              await fetch('/api/settings', {
+                              await djFetch('/api/settings', {
                                 method: 'PUT',
                                 headers: { 'Content-Type': 'application/json' },
                                 body: JSON.stringify({ tv_hide_idle_screen: String(next) }),
@@ -817,8 +835,8 @@ export default function DJAdminPage() {
                             step={1}
                             value={tvWobbleSeconds}
                             onChange={(e) => setTvWobbleSeconds(parseInt(e.target.value, 10))}
-                            onMouseUp={async () => { await fetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tv_card_wobble_seconds: String(tvWobbleSeconds) }) }); }}
-                            onTouchEnd={async () => { await fetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tv_card_wobble_seconds: String(tvWobbleSeconds) }) }); }}
+                            onMouseUp={async () => { await djFetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tv_card_wobble_seconds: String(tvWobbleSeconds) }) }); }}
+                            onTouchEnd={async () => { await djFetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tv_card_wobble_seconds: String(tvWobbleSeconds) }) }); }}
                             className="w-full accent-purple-400 h-5"
                           />
                           <div className="text-[8px] text-zinc-600">0 = off · replays on live shoutout and song cards</div>
@@ -834,7 +852,7 @@ export default function DJAdminPage() {
                             onClick={async () => {
                               const next = !thankYouTwitchEnabled;
                               setThankYouTwitchEnabled(next);
-                              await fetch('/api/settings', {
+                              await djFetch('/api/settings', {
                                 method: 'PUT',
                                 headers: { 'Content-Type': 'application/json' },
                                 body: JSON.stringify({ thank_you_twitch_enabled: String(next) }),
@@ -857,8 +875,8 @@ export default function DJAdminPage() {
                           <label className="text-[9px] text-zinc-500 w-20 shrink-0">Photo Size</label>
                           <input type="range" min={20} max={70} value={famePhotoSize}
                             onChange={(e) => setFamePhotoSize(parseInt(e.target.value, 10))}
-                            onMouseUp={async () => { await fetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fame_photo_size: String(famePhotoSize) }) }); }}
-                            onTouchEnd={async () => { await fetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fame_photo_size: String(famePhotoSize) }) }); }}
+                            onMouseUp={async () => { await djFetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fame_photo_size: String(famePhotoSize) }) }); }}
+                            onTouchEnd={async () => { await djFetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fame_photo_size: String(famePhotoSize) }) }); }}
                             className="flex-1 accent-pink-500 h-6" />
                           <span className="text-[10px] text-pink-400 font-mono w-8 text-right">{famePhotoSize}%</span>
                         </div>
@@ -866,8 +884,8 @@ export default function DJAdminPage() {
                           <label className="text-[9px] text-zinc-500 w-20 shrink-0">Completed Sz</label>
                           <input type="range" min={20} max={100} value={fameCompletedScale}
                             onChange={(e) => setFameCompletedScale(parseInt(e.target.value, 10))}
-                            onMouseUp={async () => { await fetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fame_completed_scale: String(fameCompletedScale) }) }); }}
-                            onTouchEnd={async () => { await fetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fame_completed_scale: String(fameCompletedScale) }) }); }}
+                            onMouseUp={async () => { await djFetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fame_completed_scale: String(fameCompletedScale) }) }); }}
+                            onTouchEnd={async () => { await djFetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fame_completed_scale: String(fameCompletedScale) }) }); }}
                             className="flex-1 accent-pink-500 h-6" />
                           <span className="text-[10px] text-pink-400 font-mono w-8 text-right">{fameCompletedScale}%</span>
                         </div>
@@ -875,8 +893,8 @@ export default function DJAdminPage() {
                           <label className="text-[9px] text-zinc-500 w-20 shrink-0">Rotation</label>
                           <input type="range" min={0} max={45} value={fameRotation}
                             onChange={(e) => setFameRotation(parseInt(e.target.value, 10))}
-                            onMouseUp={async () => { await fetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fame_rotation: String(fameRotation) }) }); }}
-                            onTouchEnd={async () => { await fetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fame_rotation: String(fameRotation) }) }); }}
+                            onMouseUp={async () => { await djFetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fame_rotation: String(fameRotation) }) }); }}
+                            onTouchEnd={async () => { await djFetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fame_rotation: String(fameRotation) }) }); }}
                             className="flex-1 accent-pink-500 h-6" />
                           <span className="text-[10px] text-pink-400 font-mono w-8 text-right">±{fameRotation}°</span>
                         </div>
@@ -884,8 +902,8 @@ export default function DJAdminPage() {
                           <label className="text-[9px] text-zinc-500 w-20 shrink-0">Spread</label>
                           <input type="range" min={0} max={300} step={10} value={fameSpread}
                             onChange={(e) => setFameSpread(parseInt(e.target.value, 10))}
-                            onMouseUp={async () => { await fetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fame_spread: String(fameSpread) }) }); }}
-                            onTouchEnd={async () => { await fetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fame_spread: String(fameSpread) }) }); }}
+                            onMouseUp={async () => { await djFetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fame_spread: String(fameSpread) }) }); }}
+                            onTouchEnd={async () => { await djFetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fame_spread: String(fameSpread) }) }); }}
                             className="flex-1 accent-pink-500 h-6" />
                           <span className="text-[10px] text-pink-400 font-mono w-8 text-right">{fameSpread}px</span>
                         </div>
@@ -893,8 +911,8 @@ export default function DJAdminPage() {
                           <label className="text-[9px] text-zinc-500 w-20 shrink-0">Titles Y</label>
                           <input type="range" min={0} max={70} step={1} value={fameTitleOffset}
                             onChange={(e) => setFameTitleOffset(parseInt(e.target.value, 10))}
-                            onMouseUp={async () => { await fetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fame_title_offset: String(fameTitleOffset) }) }); }}
-                            onTouchEnd={async () => { await fetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fame_title_offset: String(fameTitleOffset) }) }); }}
+                            onMouseUp={async () => { await djFetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fame_title_offset: String(fameTitleOffset) }) }); }}
+                            onTouchEnd={async () => { await djFetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fame_title_offset: String(fameTitleOffset) }) }); }}
                             className="flex-1 accent-pink-500 h-6" />
                           <span className="text-[10px] text-pink-400 font-mono w-8 text-right">{fameTitleOffset}%</span>
                         </div>
@@ -902,8 +920,8 @@ export default function DJAdminPage() {
                           <label className="text-[9px] text-zinc-500 w-20 shrink-0">Display Y</label>
                           <input type="range" min={-300} max={300} step={10} value={fameDisplayOffset}
                             onChange={(e) => setFameDisplayOffset(parseInt(e.target.value, 10))}
-                            onMouseUp={async () => { await fetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fame_display_offset: String(fameDisplayOffset) }) }); }}
-                            onTouchEnd={async () => { await fetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fame_display_offset: String(fameDisplayOffset) }) }); }}
+                            onMouseUp={async () => { await djFetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fame_display_offset: String(fameDisplayOffset) }) }); }}
+                            onTouchEnd={async () => { await djFetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fame_display_offset: String(fameDisplayOffset) }) }); }}
                             className="flex-1 accent-pink-500 h-6" />
                           <span className="text-[10px] text-pink-400 font-mono w-8 text-right">{fameDisplayOffset}px</span>
                         </div>
@@ -911,8 +929,8 @@ export default function DJAdminPage() {
                           <label className="text-[9px] text-zinc-500 w-20 shrink-0">Fade</label>
                           <input type="range" min={0} max={100} step={5} value={fameCompletedFade}
                             onChange={(e) => setFameCompletedFade(parseInt(e.target.value, 10))}
-                            onMouseUp={async () => { await fetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fame_completed_fade: String(fameCompletedFade) }) }); }}
-                            onTouchEnd={async () => { await fetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fame_completed_fade: String(fameCompletedFade) }) }); }}
+                            onMouseUp={async () => { await djFetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fame_completed_fade: String(fameCompletedFade) }) }); }}
+                            onTouchEnd={async () => { await djFetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fame_completed_fade: String(fameCompletedFade) }) }); }}
                             className="flex-1 accent-pink-500 h-6" />
                           <span className="text-[10px] text-pink-400 font-mono w-8 text-right">{fameCompletedFade}%</span>
                         </div>
@@ -921,8 +939,8 @@ export default function DJAdminPage() {
                           <label className="text-[9px] text-zinc-500 w-20 shrink-0">Shoutout ±°</label>
                           <input type="range" min={0} max={15} step={1} value={shoutoutRotation}
                             onChange={(e) => setShoutoutRotation(parseInt(e.target.value, 10))}
-                            onMouseUp={async () => { await fetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ shoutout_rotation: String(shoutoutRotation) }) }); }}
-                            onTouchEnd={async () => { await fetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ shoutout_rotation: String(shoutoutRotation) }) }); }}
+                            onMouseUp={async () => { await djFetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ shoutout_rotation: String(shoutoutRotation) }) }); }}
+                            onTouchEnd={async () => { await djFetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ shoutout_rotation: String(shoutoutRotation) }) }); }}
                             className="flex-1 accent-purple-400 h-6" />
                           <span className="text-[10px] text-purple-300 font-mono w-8 text-right">±{shoutoutRotation}°</span>
                         </div>
@@ -930,8 +948,8 @@ export default function DJAdminPage() {
                           <label className="text-[9px] text-zinc-500 w-20 shrink-0">Song ±°</label>
                           <input type="range" min={0} max={15} step={1} value={songRotation}
                             onChange={(e) => setSongRotation(parseInt(e.target.value, 10))}
-                            onMouseUp={async () => { await fetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ song_rotation: String(songRotation) }) }); }}
-                            onTouchEnd={async () => { await fetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ song_rotation: String(songRotation) }) }); }}
+                            onMouseUp={async () => { await djFetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ song_rotation: String(songRotation) }) }); }}
+                            onTouchEnd={async () => { await djFetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ song_rotation: String(songRotation) }) }); }}
                             className="flex-1 accent-amber-400 h-6" />
                           <span className="text-[10px] text-amber-300 font-mono w-8 text-right">±{songRotation}°</span>
                         </div>

@@ -38,6 +38,24 @@ export function middleware(req: NextRequest) {
   }
 
   // 5. Admin API routes (not session, handled above) - require Basic Auth
+  // For /api/settings and /api/social-posts, allow public GET (used by TV display and thank-you pages)
+  // but protect writes.
+  const method = req.method || 'GET';
+  const isReadOnlyGet = method === 'GET';
+
+  if (pathname.startsWith('/api/admin')) {
+    // /api/admin/session is already allowed above; remaining /api/admin/* needs auth
+  } else if (pathname.startsWith('/api/settings') && isReadOnlyGet) {
+    return NextResponse.next();
+  } else if (pathname.startsWith('/api/social-posts') && isReadOnlyGet) {
+    // End-of-night gallery is DJ-only, but allow GET without auth if no password set; rely on client guard for privacy
+    // If password protection is enabled, still require auth for social-posts reads to avoid leaking
+    if (!process.env.DJ_CONSOLE_PASSWORD) {
+      return NextResponse.next();
+    }
+    // otherwise fall through to auth check below
+  }
+
   if (
     pathname.startsWith('/api/admin') ||
     pathname.startsWith('/api/settings') ||

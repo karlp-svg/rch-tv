@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { ArrowLeft, Send, Camera, CheckCircle2, Clock, Loader2, XCircle, ChevronDown, AtSign, RefreshCw, SwitchCamera, X } from 'lucide-react';
 import Link from 'next/link';
 import { getStoredPublicSession, useRequireValidSession } from '@/lib/useSessionGuard';
+import TwitchThankYouPlayer from '@/components/TwitchThankYouPlayer';
 
 type FameSubmission = {
   id: number;
@@ -223,6 +224,7 @@ export default function MakeFamousPage() {
   const [submissions, setSubmissions] = useState<FameSubmission[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [showThankYouTwitch, setShowThankYouTwitch] = useState(false);
   const [fullscreenImage, setFullscreenImage] = useState<string | null>(null);
 
   const [cameraOn, setCameraOn] = useState(false);
@@ -240,6 +242,13 @@ export default function MakeFamousPage() {
     fetchSubmissions();
     const interval = setInterval(fetchSubmissions, 15000);
     return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    fetch('/api/settings', { cache: 'no-store' })
+      .then(res => res.ok ? res.json() : null)
+      .then(settings => setShowThankYouTwitch(settings?.thank_you_twitch_enabled === 'true'))
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -635,23 +644,36 @@ export default function MakeFamousPage() {
         </div>
       )}
 
-      {/* Thank You overlay */}
+      {/* Thank You overlay - mobile-safe */}
       {submitted && (
-        <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-6">
-          <div className="bg-zinc-900 border border-white/10 rounded-3xl max-w-sm w-full p-8 text-center shadow-2xl">
-            <div className="mx-auto w-16 h-16 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl flex items-center justify-center mb-4">
-              <CheckCircle2 className="w-8 h-8 text-emerald-400" />
+        <div className="fixed inset-0 bg-black/90 z-50 overflow-y-auto">
+          <div className="min-h-full flex items-start sm:items-center justify-center p-4 sm:p-6">
+            <div className="bg-zinc-900 border border-white/10 rounded-3xl max-w-md w-full p-6 text-center shadow-2xl my-4">
+              <div className="mx-auto w-14 h-14 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl flex items-center justify-center mb-4">
+                <CheckCircle2 className="w-7 h-7 text-emerald-400" />
+              </div>
+              <h3 className="text-lg font-bold mb-2">You're on the Wall of Fame!</h3>
+              <p className="text-zinc-400 text-xs mb-5 leading-relaxed">
+                Your photo has been sent to the DJ for review.
+              </p>
+              <div className="bg-white/5 border border-white/10 rounded-2xl px-4 py-3 mb-5">
+                <p className="text-zinc-300 text-[11px] leading-relaxed">
+                  <span className="font-semibold text-white">Show this screen to the DJ</span> to increase your chances of getting approved!
+                </p>
+              </div>
+              {showThankYouTwitch && (
+                <div className="mb-5 text-left">
+                  <div className="text-[10px] uppercase tracking-widest text-pink-300 mb-2">Live from @jakarl_dj</div>
+                  <TwitchThankYouPlayer />
+                </div>
+              )}
+              <button
+                onClick={() => { window.location.href = '/dashboard'; }}
+                className="w-full py-3 bg-white text-black font-semibold rounded-2xl text-sm hover:bg-zinc-200 transition-colors"
+              >
+                Back to Menu
+              </button>
             </div>
-            <h3 className="text-xl font-bold mb-2">You're on the Wall of Fame!</h3>
-            <p className="text-zinc-400 text-xs mb-6 leading-relaxed">
-              Your photo has been submitted for review. When approved, you'll see yourself on the big screen alongside other legends!
-            </p>
-            <button
-              onClick={() => { window.location.href = '/dashboard'; }}
-              className="w-full py-3 bg-white text-black font-semibold rounded-2xl text-sm hover:bg-zinc-200 transition-colors"
-            >
-              Back to Menu
-            </button>
           </div>
         </div>
       )}

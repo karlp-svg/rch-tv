@@ -669,16 +669,26 @@ export default function EndOfNightModal({ open, onClose }: { open: boolean; onCl
     }
   }, [open]);
 
+  const getDJAuth = () => {
+    if (typeof window === 'undefined') return {} as Record<string, string>;
+    try {
+      const stored = localStorage.getItem('rch_tv_dj_auth');
+      return stored ? { Authorization: stored } : {};
+    } catch {
+      return {};
+    }
+  };
+
   const fetchPosts = async () => {
     try {
-      const res = await fetch('/api/social-posts', { cache: 'no-store' });
+      const res = await fetch('/api/social-posts', { cache: 'no-store', headers: getDJAuth() as any });
       if (res.ok) setPosts(await res.json());
     } catch {}
   };
 
   const fetchItems = async () => {
     try {
-      const res = await fetch('/api/admin', { cache: 'no-store' });
+      const res = await fetch('/api/admin', { cache: 'no-store', headers: getDJAuth() as any });
       if (res.ok) {
         const d = await res.json();
         // End of Night should only show finished (Complete) items
@@ -738,7 +748,7 @@ export default function EndOfNightModal({ open, onClose }: { open: boolean; onCl
 
       const res = await fetch('/api/social-posts', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...getDJAuth() },
         body: JSON.stringify({ postType, imageBase64: dataUrl }),
       });
       if (!res.ok) throw new Error('save failed');
@@ -781,7 +791,7 @@ export default function EndOfNightModal({ open, onClose }: { open: boolean; onCl
     if (!confirm('Delete this post?')) return;
     await fetch('/api/social-posts', {
       method: 'DELETE',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...getDJAuth() },
       body: JSON.stringify({ id }),
     });
     fetchPosts();

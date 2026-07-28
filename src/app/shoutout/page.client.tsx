@@ -233,10 +233,11 @@ export default function ShoutoutPage() {
         </div>
       </div>
 
-      {/* Thank You overlay */}
+      {/* Thank You overlay - mobile-safe scroll */}
       {submitted && (
-        <div className="fixed inset-0 bg-black/90 flex items-center justify-center overflow-y-auto z-50 p-6">
-          <div className="bg-zinc-900 border border-white/10 rounded-3xl max-w-md w-full max-h-full overflow-y-auto p-6 text-center shadow-2xl">
+        <div className="fixed inset-0 bg-black/90 z-50 overflow-y-auto">
+          <div className="min-h-full flex items-start sm:items-center justify-center p-4 sm:p-6">
+            <div className="bg-zinc-900 border border-white/10 rounded-3xl max-w-md w-full p-6 text-center shadow-2xl my-4">
             {/* Instagram handle at top */}
             <div className="mb-5">
               <div className="inline-flex items-center gap-2 bg-gradient-to-r from-pink-500/20 to-purple-500/20 border border-pink-500/30 rounded-full px-4 py-2">
@@ -282,6 +283,7 @@ export default function ShoutoutPage() {
             >
               Back to Menu
             </button>
+            </div>
           </div>
         </div>
       )}
