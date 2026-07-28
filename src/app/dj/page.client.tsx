@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
-import { Music, Tv, Star, Clock, CheckCircle2, XCircle, Loader2, Trash2, PlayCircle, ExternalLink, RefreshCw, Shield, Download, AtSign, Moon, QrCode } from 'lucide-react';
+import { Music, Tv, Star, Clock, CheckCircle2, XCircle, Loader2, Trash2, PlayCircle, ExternalLink, RefreshCw, Shield, Download, AtSign, Moon, QrCode, X } from 'lucide-react';
 import EndOfNightModal from '@/components/EndOfNightModal';
 import QRCode from 'qrcode';
 
@@ -296,13 +296,16 @@ export default function DJAdminPage() {
   const handleManualShoutout = async () => {
     if (!manualShoutout.message.trim()) return;
     try {
+      const shoutoutHandle = manualShoutout.instagramHandle.trim().replace(/^@+/, '');
       await fetch('/api/shoutouts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           message: manualShoutout.message.trim(),
           fromName: manualShoutout.fromName.trim() || undefined,
-          instagramHandle: manualShoutout.instagramHandle.trim().replace(/^@+/, '') || undefined,
+          instagramHandle: shoutoutHandle || undefined,
+          // DJ entered a handle → always flag it to show on TV
+          showHandleOnTV: !!shoutoutHandle,
           sessionToken: 'dj-manual', // DJ manual entries skip session check
         }),
       });
@@ -315,6 +318,7 @@ export default function DJAdminPage() {
   const handleManualSong = async () => {
     if (!manualSong.artist.trim() || (!manualSong.anyTitle && !manualSong.title.trim())) return;
     try {
+      const songHandle = manualSong.instagramHandle.trim().replace(/^@+/, '');
       await fetch('/api/song-requests', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -323,13 +327,29 @@ export default function DJAdminPage() {
           title: manualSong.anyTitle ? undefined : manualSong.title.trim(),
           anyTitle: manualSong.anyTitle,
           requesterName: manualSong.requesterName.trim() || undefined,
-          instagramHandle: manualSong.instagramHandle.trim().replace(/^@+/, '') || undefined,
+          instagramHandle: songHandle || undefined,
+          // DJ entered a handle → always flag it to show on TV
+          showHandleOnTV: !!songHandle,
           sessionToken: 'dj-manual', // DJ manual entries skip session check
         }),
       });
       setManualSong({ artist: '', title: '', anyTitle: false, requesterName: '', instagramHandle: '' });
       setShowManualSongModal(false);
       fetchData();
+    } catch (_) {}
+  };
+
+  const handleVerifyFollower = async (handle: string) => {
+    try {
+      const res = await fetch('/api/admin/add-handle', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ handle }),
+      });
+      if (res.ok) {
+        fetchData();
+        fetchFollowersCount();
+      }
     } catch (_) {}
   };
 
@@ -521,9 +541,9 @@ export default function DJAdminPage() {
 
   return (
     <main className="min-h-screen bg-zinc-950 text-white">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4">
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             <Shield className="w-4 h-4 text-zinc-500" />
             <span className="text-zinc-500 text-xs font-mono">DJ ONLY</span>
@@ -548,21 +568,50 @@ export default function DJAdminPage() {
           </div>
         </div>
 
-        <div className="mb-6 grid grid-cols-1 xl:grid-cols-[220px_1fr] gap-4 items-start">
-          {/* Left title column */}
-          <aside className="rounded-3xl border border-white/10 bg-zinc-900/70 px-5 py-4 flex items-center min-h-0">
-            <div
-              className="text-3xl sm:text-4xl font-normal tracking-[0.08em] text-white leading-none"
-              style={{ fontFamily: "'Vortax', 'Orbitron', 'Audiowide', system-ui, sans-serif" }}
-            >
-              CONSOLE
+        <div className="mb-4 grid grid-cols-1 xl:grid-cols-[minmax(0,360px)_1fr] gap-3 items-start">
+          {/* Left column: RCH TV + CONSOLE on one line, options bar beneath */}
+          <aside className="flex flex-col gap-2">
+            <div className="flex items-stretch gap-2">
+              <div className="rounded-2xl border border-white/10 bg-black px-4 py-2 flex items-center shrink-0">
+                <div
+                  className="text-2xl sm:text-3xl font-normal tracking-[0.06em] text-white leading-none whitespace-pre"
+                  style={{ fontFamily: "'Vortax', 'Orbitron', 'Audiowide', system-ui, sans-serif" }}
+                >
+                  RCH TV
+                </div>
+              </div>
+              <div className="rounded-2xl border border-white/10 bg-zinc-900/70 px-4 py-2 flex items-center flex-1 min-w-0">
+                <div
+                  className="text-2xl sm:text-3xl font-normal tracking-[0.06em] text-white leading-none"
+                  style={{ fontFamily: "'Vortax', 'Orbitron', 'Audiowide', system-ui, sans-serif" }}
+                >
+                  CONSOLE
+                </div>
+              </div>
             </div>
+
+            {/* Options & Settings toggle bar */}
+            <button
+              onClick={() => setShowOptions(!showOptions)}
+              className="w-full bg-zinc-900/50 border border-white/10 rounded-2xl px-4 py-2.5 flex items-center justify-between gap-3 text-[11px] text-zinc-400 uppercase font-mono hover:bg-white/5 transition"
+            >
+              <span className="flex items-center gap-2 shrink-0">
+                <span className="text-zinc-500">⚙️</span>
+                Options &amp; Settings
+              </span>
+              <span className="flex items-center gap-2 min-w-0">
+                <span className="text-[9px] text-zinc-500 truncate">
+                  {showOptions ? 'collapse' : `${followersCount.toLocaleString()} followers · ${publicSession ? `session ${publicSession.slice(0, 6)}…` : 'no session'}`}
+                </span>
+                <span className={`text-zinc-500 transition-transform shrink-0 ${showOptions ? 'rotate-180' : ''}`}>▼</span>
+              </span>
+            </button>
           </aside>
 
           {/* Right controls grid — always visible: On Air Now + TV Display */}
           <section className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-3 items-stretch">
             {/* On Air Now (always visible, prominent) */}
-            <div className="bg-zinc-900/80 border border-white/10 rounded-2xl p-4 flex flex-col justify-between min-h-[132px]">
+            <div className="bg-zinc-900/80 border border-white/10 rounded-2xl p-4 flex flex-col justify-between min-h-[112px]">
               <div className="flex items-center justify-between">
                 <div className="text-[10px] text-zinc-400 uppercase font-mono tracking-wider flex items-center gap-2">
                   <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
@@ -607,9 +656,9 @@ export default function DJAdminPage() {
                     <div className="flex items-center gap-2">
                       <button
                         onClick={completeCurrentAction}
-                        className="text-[10px] px-3 py-1.5 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/30 rounded-full font-semibold flex items-center gap-1 transition"
+                        className="text-[10px] px-3 py-1.5 bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/30 rounded-full font-semibold flex items-center gap-1 transition"
                       >
-                        <CheckCircle2 className="w-3 h-3" /> {tvQueueLength > 1 ? 'Complete & Next' : 'Complete'}
+                        <X className="w-3 h-3" /> {tvQueueLength > 1 ? 'Remove & Next' : 'Remove'}
                       </button>
                     </div>
                   </div>
@@ -620,7 +669,7 @@ export default function DJAdminPage() {
             </div>
 
             {/* TV Display (always visible, right column) */}
-            <div className="bg-zinc-900 border border-white/10 rounded-2xl p-3.5 flex flex-col justify-between min-h-[132px]">
+            <div className="bg-zinc-900 border border-white/10 rounded-2xl p-3.5 flex flex-col justify-between min-h-[112px]">
               <div className="flex items-center justify-between gap-2">
                 <div>
                   <div className="text-[10px] text-zinc-400 uppercase font-mono">📺 TV Display</div>
@@ -655,26 +704,13 @@ export default function DJAdminPage() {
               </div>
             </div>
 
-            {/* Collapsible OPTIONS section (full width) */}
-            <div className="lg:col-span-2 bg-zinc-900/50 border border-white/10 rounded-2xl overflow-hidden">
-              <button
-                onClick={() => setShowOptions(!showOptions)}
-                className="w-full px-4 py-3 flex items-center justify-between text-xs text-zinc-400 uppercase font-mono hover:bg-white/5 transition"
-              >
-                <span className="flex items-center gap-2">
-                  <span className="text-zinc-500">⚙️</span>
-                  Options &amp; Settings
-                </span>
-                <div className="flex items-center gap-3">
-                  <span className="text-[9px] text-zinc-500">
-                    {showOptions ? 'collapse' : `${followersCount.toLocaleString()} followers · ${publicSession ? `session ${publicSession.slice(0, 6)}…` : 'no session'}`}
-                  </span>
-                  <span className={`text-zinc-500 transition-transform ${showOptions ? 'rotate-180' : ''}`}>▼</span>
-                </div>
-              </button>
+          </section>
+        </div>
 
-              {showOptions && (
-                <div className="border-t border-white/5 p-4">
+        {/* Expanded OPTIONS panel — full width, only rendered when open */}
+        {showOptions && (
+          <div className="mb-4 bg-zinc-900/50 border border-white/10 rounded-2xl overflow-hidden">
+            <div className="p-4">
                   <div className="flex flex-col 2xl:flex-row gap-4">
                     {/* Left column: Session, End of Night, IG Followers stacked */}
                     <div className="flex flex-col gap-3 2xl:w-72 shrink-0">
@@ -834,11 +870,10 @@ export default function DJAdminPage() {
                       </div>
                     </div>
                   </div>
-                </div>
-              )}
             </div>
-          </section>
-        </div>
+          </div>
+        )}
+
         {/* Upload Followers Dump Modal */}
         {showUploadModal && (
           <div className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4" onClick={() => setShowUploadModal(false)}>
@@ -1262,6 +1297,7 @@ export default function DJAdminPage() {
                 onUpdate={(status) => updateStatus(tab, item.id, status)}
                 onDelete={() => deleteItem(tab, item.id)}
                 onImageClick={(src) => setFullscreenImage(src)}
+                onVerifyFollower={handleVerifyFollower}
               />
             ))
           )}
@@ -1315,13 +1351,14 @@ function TabButton({ active, onClick, icon, label, count, color }: {
   );
 }
 
-function AdminCard({ type, item, updating, onUpdate, onDelete, onImageClick }: {
+function AdminCard({ type, item, updating, onUpdate, onDelete, onImageClick, onVerifyFollower }: {
   type: Tab;
   item: Shoutout | SongRequest | FameSubmission;
   updating: boolean;
   onUpdate: (status: Status) => void;
   onDelete: () => void;
   onImageClick: (src: string) => void;
+  onVerifyFollower: (handle: string) => void;
 }) {
   const config = statusConfig[item.status];
   const Icon = config.icon;
@@ -1348,9 +1385,12 @@ function AdminCard({ type, item, updating, onUpdate, onDelete, onImageClick }: {
                       <CheckCircle2 className="w-3 h-3" /> ✓ Verified Follower
                     </span>
                   ) : item.followerVerified === false ? (
-                    <span className="text-[10px] px-2.5 py-1 rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/30 font-medium flex items-center gap-1">
+                    <button
+                      onClick={() => onVerifyFollower(item.instagramHandle!)}
+                      className="text-[10px] px-2.5 py-1 rounded-full bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30 font-medium flex items-center gap-1 transition"
+                    >
                       ⚠ Check Follower Manual
-                    </span>
+                    </button>
                   ) : null}
                 </div>
               )}
@@ -1384,9 +1424,12 @@ function AdminCard({ type, item, updating, onUpdate, onDelete, onImageClick }: {
                     <CheckCircle2 className="w-3 h-3" /> ✓ Verified Follower
                   </span>
                 ) : item.followerVerified === false ? (
-                  <span className="text-[10px] px-2.5 py-1 rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/30 font-medium flex items-center gap-1">
+                  <button
+                    onClick={() => onVerifyFollower(item.instagramHandle!)}
+                    className="text-[10px] px-2.5 py-1 rounded-full bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30 font-medium flex items-center gap-1 transition"
+                  >
                     ⚠ Check Follower Manual
-                  </span>
+                  </button>
                 ) : null)}
               </div>
             </>
@@ -1427,9 +1470,12 @@ function AdminCard({ type, item, updating, onUpdate, onDelete, onImageClick }: {
                       <CheckCircle2 className="w-3 h-3" /> ✓ Verified Follower
                     </span>
                   ) : item.followerVerified === false ? (
-                    <span className="text-[10px] px-2.5 py-1 rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/30 font-medium flex items-center gap-1">
+                    <button
+                      onClick={() => onVerifyFollower(item.instagramHandle!)}
+                      className="text-[10px] px-2.5 py-1 rounded-full bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30 font-medium flex items-center gap-1 transition"
+                    >
                       ⚠ Check Follower Manual
-                    </span>
+                    </button>
                   ) : null)}
                 </div>
                 <div className="flex gap-2 mt-3 flex-wrap">

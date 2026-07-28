@@ -174,119 +174,233 @@ export default function TVPage() {
   );
 }
 
+// Instagram handle sticker — matches the End of Night grayscale sticker.
+// Sits at the bottom-right of its parent, half hanging over the bottom edge.
+const HANDLE_FONT_SIZE = 'clamp(1.75rem, 2.5vw, 3.25rem)';
+
+function HandleSticker({ handle, rotationDeg = 0 }: { handle: string; rotationDeg?: number }) {
+  const clean = handle.replace(/^@+/, '').trim();
+  if (!clean) return null;
+  return (
+    <div
+      className="absolute bottom-0 right-10 z-30 flex items-center whitespace-nowrap rounded-full shadow-[0_14px_38px_rgba(0,0,0,0.55)]"
+      style={{
+        fontSize: HANDLE_FONT_SIZE,
+        gap: '0.38em',
+        padding: '0.4em 0.62em',
+        border: '2px solid rgba(255,255,255,0.4)',
+        background: 'linear-gradient(135deg, #555555 0%, #333333 50%, #1a1a1a 100%)',
+        // half over the bottom edge
+        transform: `translateY(50%) rotate(${rotationDeg}deg)`,
+      }}
+    >
+      <InstagramIcon className="text-white shrink-0" style={{ width: '1.15em', height: '1.15em' }} />
+      <span
+        className="font-bold leading-none text-white"
+        style={{ fontFamily: "'Montserrat', sans-serif", textShadow: '0 1px 3px rgba(0,0,0,0.25)' }}
+      >
+        {clean}
+      </span>
+    </div>
+  );
+}
+
 function ShoutoutView({ item, hideBackground }: { item: Extract<TVItem, { type: 'shoutout' }>; hideBackground?: boolean }) {
-  const lineCount = item.message ? Math.min(3, Math.ceil(item.message.length / 28)) : 1;
-  const bubbleH = Math.max(200, 120 + lineCount * 56 + (item.fromName ? 44 : 0));
+  // Deterministic slight rotation, same spirit as the End of Night bubbles (1.5°–2.7°)
+  const side = item.id % 2 === 0 ? -1 : 1;
+  const rotDeg = side * (1.5 + (item.id % 3) * 0.6);
+  const bubbleFill = item.id % 2 === 0 ? '#f3e8ff' : '#e9d5ff';
 
   return (
-    <div className={`w-full h-full ${hideBackground ? 'bg-transparent' : 'bg-gradient-to-br from-purple-950 via-black to-indigo-950'} flex flex-col items-center justify-center p-8`}>
+    <div
+      className={`w-full h-full ${hideBackground ? 'bg-transparent' : ''} flex flex-col items-center justify-center p-8`}
+      style={hideBackground ? undefined : { background: 'linear-gradient(135deg, #2a0845 0%, #000000 50%, #1a1a2e 100%)' }}
+    >
       {/* RCH TV header on grey rounded rect */}
-      <div className="bg-zinc-800/70 backdrop-blur-sm border border-white/10 rounded-2xl px-8 py-3 mb-8 shadow-2xl">
+      <div className="bg-zinc-800/70 backdrop-blur-sm border border-white/10 rounded-2xl px-8 py-3 mb-14 shadow-2xl">
         <div
-          className="text-4xl sm:text-5xl uppercase tracking-[0.08em] text-purple-400 font-normal whitespace-pre text-center"
-          style={{ fontFamily: "'Vortax', system-ui, sans-serif" }}
+          className="text-4xl sm:text-5xl uppercase tracking-[0.08em] font-normal whitespace-pre text-center"
+          style={{ fontFamily: "'Vortax', system-ui, sans-serif", color: '#c084fc' }}
         >
           RCH  TV
         </div>
-        <div className="text-[10px] uppercase tracking-[0.3em] text-purple-300 text-center font-light mt-1">TV Shoutout</div>
+        <div
+          className="text-center text-purple-200 mt-1"
+          style={{ fontFamily: "'Gochi Hand', cursive", fontSize: 'clamp(1rem, 1.6vw, 1.75rem)' }}
+        >
+          Tonight&apos;s Shoutouts
+        </div>
       </div>
 
-      {/* Speech bubble with handle inside at bottom-right */}
-      <div className="relative max-w-3xl w-full mx-auto" style={{ perspective: '800px' }}>
+      {/* Speech bubble — End of Night style: flat purple fill, tail angled out to the LEFT */}
+      <div className="relative w-full max-w-[64rem] mx-auto">
         <div
-          className="bg-gradient-to-br from-purple-100 to-purple-50 rounded-[2.5rem] px-10 py-8 shadow-[0_20px_60px_rgba(0,0,0,0.5)] relative"
-          style={{ transform: 'rotate(-0.5deg)' }}
+          className="relative rounded-[2rem] px-14 py-12 shadow-[0_20px_60px_rgba(0,0,0,0.5)]"
+          style={{ background: bubbleFill, transform: `rotate(${rotDeg}deg)` }}
         >
           <div
-            className="text-purple-950 font-bold leading-tight text-center"
-            style={{ fontFamily: "'Gochi Hand', 'Permanent Marker', cursive", fontSize: 'clamp(2rem, 5vw, 4rem)' }}
+            className="text-center leading-tight"
+            style={{ fontFamily: "'Gochi Hand', 'Permanent Marker', cursive", fontSize: 'clamp(2rem, 5vw, 4.25rem)', color: '#2a0845' }}
           >
-            {item.message}
+            &ldquo;{item.message}&rdquo;
           </div>
           {item.fromName && (
-            <div className="text-purple-600 text-center mt-4" style={{ fontFamily: "'Caveat', cursive", fontSize: 'clamp(1.5rem, 3.5vw, 3rem)' }}>
+            <div
+              className="text-center mt-4"
+              style={{ fontFamily: "'Caveat', cursive", fontSize: 'clamp(1.5rem, 3.4vw, 3rem)', color: '#7e22ce' }}
+            >
               — {item.fromName}
             </div>
           )}
-          {/* Instagram handle at bottom-right of bubble */}
+
+          {/* Tail — on the left third of the bubble, angled outwards to the left */}
+          <svg
+            className="absolute pointer-events-none"
+            style={{ left: '14%', top: 'calc(100% - 3px)', width: 'clamp(4rem, 7vw, 7rem)', height: 'auto' }}
+            viewBox="-10 0 62 38"
+            fill="none"
+            aria-hidden="true"
+          >
+            <polygon points="0,0 44,0 -8,36" fill={bubbleFill} />
+          </svg>
+
+          {/* Instagram handle sticker — bottom right, half over the bottom edge */}
           {item.showHandleOnTv && item.instagramHandle && (
-            <div className="absolute bottom-3 right-4 flex items-center gap-1.5 bg-gradient-to-r from-pink-500/30 to-purple-500/30 border border-pink-500/40 rounded-full px-3 py-1">
-              <InstagramIcon className="w-4 h-4 text-pink-500" />
-              <span className="text-purple-800 font-bold text-xs" style={{ fontFamily: "'Montserrat', sans-serif" }}>
-                {item.instagramHandle}
-              </span>
-            </div>
+            <HandleSticker handle={item.instagramHandle} rotationDeg={rotDeg} />
           )}
-          {/* Speech bubble tail */}
-          <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 w-0 h-0 border-l-[24px] border-r-[24px] border-t-[24px] border-l-transparent border-r-transparent border-t-purple-50"></div>
         </div>
       </div>
     </div>
   );
 }
 
+// Accent palette used by the End of Night songs post
+const SONG_ACCENTS = ['#1DB954', '#FF4A00', '#F7E600', '#A259FF', '#00C8F0', '#FF69B4'];
+
 function SongView({ item, hideBackground }: { item: Extract<TVItem, { type: 'song' }>; hideBackground?: boolean }) {
+  const accent = SONG_ACCENTS[item.id % SONG_ACCENTS.length];
+  const rotDeg = (item.id % 2 === 0 ? -1 : 1) * (1.5 + (item.id % 3) * 0.5);
+  // Waveform bar heights from the End of Night template
+  const waveHeights = [18, 34, 52, 38, 24];
+
   return (
-    <div className={`w-full h-full ${hideBackground ? 'bg-transparent' : 'bg-gradient-to-br from-amber-950 via-black to-yellow-950'} flex flex-col items-center justify-center p-8`}>
+    <div
+      className={`w-full h-full ${hideBackground ? 'bg-transparent' : ''} flex flex-col items-center justify-center p-8`}
+      style={
+        hideBackground
+          ? undefined
+          : { background: 'linear-gradient(135deg, #1a1a2e 0%, #0f0f23 30%, #16213e 60%, #0a0a0a 100%)' }
+      }
+    >
       {/* RCH TV header on grey rounded rect */}
-      <div className="bg-zinc-800/70 backdrop-blur-sm border border-white/10 rounded-2xl px-8 py-3 mb-8 shadow-2xl">
+      <div className="bg-zinc-800/70 backdrop-blur-sm border border-white/10 rounded-2xl px-8 py-3 mb-14 shadow-2xl">
         <div
-          className="text-4xl sm:text-5xl uppercase tracking-[0.08em] text-amber-400 font-normal whitespace-pre text-center"
-          style={{ fontFamily: "'Vortax', system-ui, sans-serif" }}
+          className="text-4xl sm:text-5xl uppercase tracking-[0.08em] font-normal whitespace-pre text-center"
+          style={{ fontFamily: "'Vortax', system-ui, sans-serif", color: '#1DB954' }}
         >
           RCH  TV
         </div>
-        <div className="text-[10px] uppercase tracking-[0.3em] text-amber-300 text-center font-light mt-1">Now Playing</div>
+        <div
+          className="text-center text-white mt-1"
+          style={{ fontFamily: "'Permanent Marker', cursive", fontSize: 'clamp(1rem, 1.6vw, 1.75rem)' }}
+        >
+          Now Playing
+        </div>
       </div>
 
-      {/* Song player card - dark with accent rail like End of Night */}
-      <div className="relative max-w-3xl w-full mx-auto" style={{ perspective: '800px' }}>
+      {/* Song player card — End of Night template */}
+      <div className="relative w-full max-w-[64rem] mx-auto">
         <div
-          className="bg-gradient-to-r from-zinc-800 via-zinc-800 to-amber-700/30 rounded-[2rem] px-10 py-8 shadow-[0_20px_60px_rgba(0,0,0,0.5)] relative overflow-hidden"
-          style={{ transform: 'rotate(0.8deg)' }}
+          className="relative rounded-[2rem] shadow-[0_22px_60px_rgba(0,0,0,0.65)]"
+          style={{
+            background: `linear-gradient(90deg, #111217 0%, #20212a 72%, ${accent} 100%)`,
+            transform: `rotate(${rotDeg}deg)`,
+            padding: 'clamp(1.75rem, 3vw, 3rem) clamp(1.5rem, 2.5vw, 2.5rem)',
+          }}
         >
           {/* Accent rail */}
-          <div className="absolute left-3 top-4 bottom-4 w-2 rounded-full bg-gradient-to-b from-amber-400 to-amber-600"></div>
+          <div
+            className="absolute rounded-full"
+            style={{ background: accent, left: '0.7rem', top: '1.1rem', bottom: '1.1rem', width: '0.85rem' }}
+          />
           {/* Inner border */}
-          <div className="absolute left-7 top-5 right-5 bottom-5 rounded-2xl border border-white/10"></div>
+          <div
+            className="absolute rounded-[1.4rem] pointer-events-none"
+            style={{ left: '1.9rem', right: '1.4rem', top: '1.4rem', bottom: '1.4rem', border: '2px solid rgba(255,255,255,0.16)' }}
+          />
 
-          <div className="relative pl-10 pr-4">
-            {/* Artist - hero */}
+          <div className="relative flex items-center gap-8 pl-8 pr-4">
+            {/* Play circle with outer ring */}
             <div
-              className="text-white font-bold leading-tight"
-              style={{ fontFamily: "'Orbitron', 'Audiowide', system-ui, sans-serif", fontSize: 'clamp(2rem, 5.5vw, 4.5rem)' }}
+              className="shrink-0 grid place-items-center rounded-full"
+              style={{ width: 'clamp(5rem, 7.4vw, 9.25rem)', height: 'clamp(5rem, 7.4vw, 9.25rem)', background: 'rgba(0,0,0,0.35)' }}
             >
-              {item.artist}
+              <div
+                className="grid place-items-center rounded-full"
+                style={{ width: '84%', height: '84%', background: accent }}
+              >
+                <svg viewBox="0 0 24 24" style={{ width: '46%', height: '46%' }} aria-hidden="true">
+                  <polygon points="7,3 7,21 21,12" fill="#000000" />
+                </svg>
+              </div>
             </div>
-            {/* Title - only show if not "anything" */}
-            {!item.anyTitle && (
+
+            {/* Artist on top, title below */}
+            <div className="min-w-0 flex-1">
               <div
-                className="text-amber-300 mt-2"
-                style={{ fontFamily: "'Permanent Marker', cursive", fontSize: 'clamp(1.2rem, 3vw, 2.5rem)' }}
+                className="text-white font-bold leading-tight truncate"
+                style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 'clamp(2rem, 4.6vw, 4rem)' }}
               >
-                {item.title}
+                {item.artist}
               </div>
-            )}
-            {/* Requester chip */}
-            {item.requesterName && (
               <div
-                className="inline-block mt-4 bg-amber-500/20 border border-amber-500/30 rounded-full px-5 py-1.5 text-amber-300"
-                style={{ fontFamily: "'Caveat', cursive", fontSize: 'clamp(1rem, 2vw, 1.8rem)' }}
+                className="mt-2 truncate"
+                style={{
+                  fontFamily: "'Permanent Marker', cursive",
+                  fontSize: 'clamp(1.25rem, 3vw, 2.6rem)',
+                  color: item.anyTitle ? accent : '#e4e4e7',
+                }}
               >
-                Requested by {item.requesterName}
+                {item.anyTitle ? 'Anything' : item.title}
               </div>
-            )}
-            {/* Instagram handle at bottom-right of card */}
-            {item.showHandleOnTv && item.instagramHandle && (
-              <div className="absolute bottom-3 right-3 flex items-center gap-1.5 bg-gradient-to-r from-amber-500/30 to-yellow-500/30 border border-amber-500/40 rounded-full px-3 py-1">
-                <InstagramIcon className="w-4 h-4 text-amber-400" />
-                <span className="text-amber-200 font-bold text-xs" style={{ fontFamily: "'Montserrat', sans-serif" }}>
-                  {item.instagramHandle}
-                </span>
-              </div>
-            )}
+            </div>
+
+            {/* Decorative waveform bars at the far right */}
+            <div className="hidden sm:flex shrink-0 items-center" style={{ gap: 'clamp(0.3rem, 0.5vw, 0.55rem)' }}>
+              {waveHeights.map((h, i) => (
+                <div
+                  key={i}
+                  className="rounded-full"
+                  style={{
+                    width: 'clamp(0.35rem, 0.55vw, 0.6rem)',
+                    height: `calc(${h} * clamp(0.09rem, 0.13vw, 0.16rem))`,
+                    background: 'rgba(255,255,255,0.45)',
+                  }}
+                />
+              ))}
+            </div>
           </div>
+
+          {/* Instagram handle sticker — bottom right, half over the bottom edge */}
+          {item.showHandleOnTv && item.instagramHandle && (
+            <HandleSticker handle={item.instagramHandle} rotationDeg={rotDeg} />
+          )}
         </div>
+
+        {/* Requester below the card, left aligned — matches End of Night meta row */}
+        {item.requesterName && (
+          <div
+            className="mt-5 pl-6"
+            style={{
+              fontFamily: "'Caveat', cursive",
+              fontSize: 'clamp(1.2rem, 2.2vw, 2.1rem)',
+              color: 'rgba(255,255,255,0.78)',
+              transform: `rotate(${rotDeg}deg)`,
+            }}
+          >
+            requested by {item.requesterName}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -419,9 +533,9 @@ function FameView({ item, completedFame, fameSettings, hideBackground }: { item:
   );
 }
 
-function InstagramIcon({ className = '' }: { className?: string }) {
+function InstagramIcon({ className = '', style }: { className?: string; style?: React.CSSProperties }) {
   return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg className={className} style={style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <rect x="2" y="2" width="20" height="20" rx="5" />
       <circle cx="12" cy="12" r="5" />
       <circle cx="17.5" cy="6.5" r="1.5" fill="currentColor" stroke="none" />

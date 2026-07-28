@@ -9,7 +9,7 @@ export async function GET() {
   try {
         const DEFAULT_DURATION = '60';
 
-    const [activeShoutouts, activeSongs, activeFame, completedFame, settingsRows] = await Promise.all([
+    const [activeShoutouts, activeSongs, activeFame, completedFame, settingsRows, queuedShoutouts, queuedSongs, queuedFame] = await Promise.all([
       db.select({
         id: shoutouts.id,
         message: shoutouts.message,
@@ -64,7 +64,24 @@ export async function GET() {
         .limit(20),
 
       db.select().from(appSettings),
+
+      db.select({ count: sql<number>`count(*)::int` })
+        .from(shoutouts)
+        .where(eq(shoutouts.status, 'queued')),
+
+      db.select({ count: sql<number>`count(*)::int` })
+        .from(songRequests)
+        .where(eq(songRequests.status, 'queued')),
+
+      db.select({ count: sql<number>`count(*)::int` })
+        .from(fameSubmissions)
+        .where(eq(fameSubmissions.status, 'queued')),
     ]);
+
+    const queuedCount =
+      Number(queuedShoutouts[0]?.count ?? 0) +
+      Number(queuedSongs[0]?.count ?? 0) +
+      Number(queuedFame[0]?.count ?? 0);
 
     const settings: Record<string, string> = { display_duration: DEFAULT_DURATION };
     for (const row of settingsRows) {
@@ -93,6 +110,8 @@ export async function GET() {
     const response = NextResponse.json({
       current: live[0] || null,
       queue: live,
+      queuedCount,
+      displayDuration,
       completedFame: completedFame.map((item: any) => ({
         id: item.id,
         polaroidSrc: item.polaroidUrl || null,
@@ -122,6 +141,6 @@ export async function GET() {
     return response;
   } catch (error) {
     console.error('Error fetching TV data:', error);
-    return NextResponse.json({ current: null, queue: [], completedFame: [] }, { status: 500 });
+    return NextResponse.json({ current: null, queue: [], queuedCount: 0, completedFame: [] }, { status: 500 });
   }
 }

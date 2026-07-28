@@ -280,14 +280,39 @@ export default function SongRequestPage() {
       {/* Thank You overlay */}
       {submitted && (
         <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-6">
-          <div className="bg-zinc-900 border border-white/10 rounded-3xl max-w-sm w-full p-8 text-center shadow-2xl">
-            <div className="mx-auto w-16 h-16 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl flex items-center justify-center mb-4">
-              <CheckCircle2 className="w-8 h-8 text-emerald-400" />
+          <div className="bg-zinc-900 border border-white/10 rounded-3xl max-w-sm w-full p-6 text-center shadow-2xl">
+            {/* Instagram handle at top */}
+            <div className="mb-5">
+              <div className="inline-flex items-center gap-2 bg-gradient-to-r from-amber-500/20 to-yellow-500/20 border border-amber-500/30 rounded-full px-4 py-2">
+                <svg className="w-5 h-5 text-amber-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="2" y="2" width="20" height="20" rx="5" />
+                  <circle cx="12" cy="12" r="5" />
+                  <circle cx="17.5" cy="6.5" r="1.5" fill="currentColor" stroke="none" />
+                </svg>
+                <span className="text-white font-bold text-sm" style={{ fontFamily: "'Montserrat', sans-serif" }}>
+                  {instagramHandle || 'yourhandle'}
+                </span>
+              </div>
             </div>
-            <h3 className="text-xl font-bold mb-2">Song Request Sent!</h3>
-            <p className="text-zinc-400 text-xs mb-6 leading-relaxed">
-              Your request has been submitted for review. If the DJ approves it, you'll hear it on the speakers and see it on the big screen!
+
+            {/* Success icon */}
+            <div className="mx-auto w-14 h-14 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl flex items-center justify-center mb-4">
+              <CheckCircle2 className="w-7 h-7 text-emerald-400" />
+            </div>
+
+            {/* Main message */}
+            <h3 className="text-lg font-bold text-white mb-2">Request Sent!</h3>
+            <p className="text-zinc-400 text-xs mb-5 leading-relaxed">
+              Your song request has been sent to the DJ for review.
             </p>
+
+            {/* DJ tip */}
+            <div className="bg-white/5 border border-white/10 rounded-2xl px-4 py-3 mb-5">
+              <p className="text-zinc-300 text-[11px] leading-relaxed">
+                <span className="font-semibold text-white">Show this screen to the DJ</span> to increase your chances of getting approved!
+              </p>
+            </div>
+
             <button
               onClick={() => { window.location.href = '/dashboard'; }}
               className="w-full py-3 bg-white text-black font-semibold rounded-2xl text-sm hover:bg-zinc-200 transition-colors"
