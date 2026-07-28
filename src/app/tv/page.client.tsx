@@ -39,6 +39,7 @@ export default function TVPage() {
   const [prevKey, setPrevKey] = useState<string>('');
   const [fameSettings, setFameSettings] = useState<FameSettings>(DEFAULT_FAME_SETTINGS);
   const [hideBackground, setHideBackground] = useState<boolean>(false);
+  const [hideIdleScreen, setHideIdleScreen] = useState<boolean>(false);
   const [publicQr, setPublicQr] = useState<string>('');
   const [publicSession, setPublicSession] = useState<string>('');
 
@@ -53,7 +54,7 @@ export default function TVPage() {
             setPublicSession(data.session);
             const qr = await QRCode.toDataURL(
               `${typeof window !== 'undefined' ? window.location.origin : ''}/?session=${encodeURIComponent(data.session)}`,
-              { margin: 2, width: 400, color: { dark: '#a855f7', light: '#00000000' } }
+              { margin: 2, width: 400, color: { dark: '#ffffff', light: '#00000000' } }
             );
             setPublicQr(qr);
           }
@@ -61,15 +62,6 @@ export default function TVPage() {
       } catch (_) {}
     };
     fetchSession();
-    // Also load settings so hideBackground is initialized even with no items
-    fetch('/api/settings', { cache: 'no-store' })
-      .then(r => r.ok ? r.json() : null)
-      .then(s => {
-        if (s && s.tv_hide_background !== undefined) {
-          setHideBackground(s.tv_hide_background === 'true');
-        }
-      })
-      .catch(() => {});
     const interval = setInterval(fetchSession, 60000); // refresh every minute
     return () => clearInterval(interval);
   }, []);
@@ -83,6 +75,17 @@ export default function TVPage() {
 
     const checkForChanges = async () => {
       try {
+        // Also refresh settings (e.g. hideBackground, hideIdleScreen toggles from DJ console)
+        fetch('/api/settings', { cache: 'no-store' })
+          .then(r => r.ok ? r.json() : null)
+          .then(s => {
+            if (s) {
+              if (s.tv_hide_background !== undefined) setHideBackground(s.tv_hide_background === 'true');
+              if (s.tv_hide_idle_screen !== undefined) setHideIdleScreen(s.tv_hide_idle_screen === 'true');
+            }
+          })
+          .catch(() => {});
+
         // Lightweight check endpoint - returns only metadata (~100 bytes)
         // Add timestamp to bust OBS browser source cache
         const res = await fetch(`/api/tv/check?_=${Date.now()}`, { cache: 'no-store' });
@@ -127,6 +130,10 @@ export default function TVPage() {
   }, []);
 
   if (!currentItem) {
+    // If hide idle screen is on, show nothing
+    if (hideIdleScreen) {
+      return <main className="w-screen h-screen bg-transparent"></main>;
+    }
     return (
       <main className={`w-screen h-screen ${hideBackground ? 'bg-transparent' : 'bg-black'} flex flex-col items-center justify-center p-8`}>
         <div className="text-center mb-8">
@@ -136,18 +143,15 @@ export default function TVPage() {
           >
             RCH  TV
           </div>
-          <div className="text-zinc-500 text-sm mb-2">Waiting for requests...</div>
-          <div className="text-zinc-600 text-xs">Scan the QR code to join</div>
         </div>
         {publicQr ? (
           <div className="relative">
-            <img src={publicQr} alt="Scan to join" className="w-64 h-64 sm:w-80 sm:h-80 object-contain" />
-            <div className="absolute -bottom-8 left-0 right-0 text-center text-xs text-purple-400 font-mono">
-              {publicSession ? `${publicSession.slice(0, 8)}...` : ''}
+            <div className="w-64 h-64 sm:w-80 sm:h-80 bg-black/90 rounded-2xl flex items-center justify-center shadow-[0_0_40px_rgba(0,0,0,0.6)]">
+              <img src={publicQr} alt="Scan to join" className="w-56 h-56 sm:w-[18rem] sm:h-[18rem] object-contain" />
             </div>
           </div>
         ) : (
-          <div className="w-64 h-64 sm:w-80 sm:h-80 rounded-2xl border-2 border-dashed border-zinc-700 grid place-items-center text-zinc-600">
+          <div className="w-64 h-64 sm:w-80 sm:h-80 rounded-2xl border-2 border-dashed border-zinc-700 bg-black/40 grid place-items-center text-zinc-600">
             Loading QR...
           </div>
         )}
@@ -171,71 +175,119 @@ export default function TVPage() {
 }
 
 function ShoutoutView({ item, hideBackground }: { item: Extract<TVItem, { type: 'shoutout' }>; hideBackground?: boolean }) {
+  const lineCount = item.message ? Math.min(3, Math.ceil(item.message.length / 28)) : 1;
+  const bubbleH = Math.max(200, 120 + lineCount * 56 + (item.fromName ? 44 : 0));
+
   return (
-    <div className={`w-full h-full ${hideBackground ? 'bg-transparent' : 'bg-gradient-to-br from-purple-950 via-black to-indigo-950'} flex flex-col items-center justify-center p-12 text-center`}>
-      <div className="text-5xl sm:text-6xl uppercase tracking-[0.08em] text-purple-400 font-normal whitespace-pre mb-1" style={{ fontFamily: "'Vortax', system-ui, sans-serif" }}>
-        RCH  TV
-      </div>
-      <div className="text-sm uppercase tracking-[0.3em] text-purple-300 mb-8 font-light">TV Shoutout</div>
-      <div
-        className="text-white font-bold leading-tight max-w-4xl text-center mb-8"
-        style={{ fontFamily: "'Gochi Hand', 'Permanent Marker', cursive", fontSize: 'clamp(3rem, 8vw, 6rem)' }}
-      >
-        {item.message}
-      </div>
-      {item.fromName && (
-        <div className="text-purple-300 text-5xl mb-4" style={{ fontFamily: "'Caveat', cursive" }}>
-          — {item.fromName}
+    <div className={`w-full h-full ${hideBackground ? 'bg-transparent' : 'bg-gradient-to-br from-purple-950 via-black to-indigo-950'} flex flex-col items-center justify-center p-8`}>
+      {/* RCH TV header on grey rounded rect */}
+      <div className="bg-zinc-800/70 backdrop-blur-sm border border-white/10 rounded-2xl px-8 py-3 mb-8 shadow-2xl">
+        <div
+          className="text-4xl sm:text-5xl uppercase tracking-[0.08em] text-purple-400 font-normal whitespace-pre text-center"
+          style={{ fontFamily: "'Vortax', system-ui, sans-serif" }}
+        >
+          RCH  TV
         </div>
-      )}
-      {item.showHandleOnTv && item.instagramHandle && (
-        <div className="mt-4 inline-flex items-center gap-3 bg-gradient-to-r from-pink-500/20 to-purple-500/20 border border-pink-500/30 rounded-full px-6 py-3">
-          <InstagramIcon className="w-6 h-6 text-pink-400" />
-          <span className="text-white font-bold text-xl" style={{ fontFamily: "'Montserrat', sans-serif" }}>
-            {item.instagramHandle}
-          </span>
+        <div className="text-[10px] uppercase tracking-[0.3em] text-purple-300 text-center font-light mt-1">TV Shoutout</div>
+      </div>
+
+      {/* Speech bubble with handle inside at bottom-right */}
+      <div className="relative max-w-3xl w-full mx-auto" style={{ perspective: '800px' }}>
+        <div
+          className="bg-gradient-to-br from-purple-100 to-purple-50 rounded-[2.5rem] px-10 py-8 shadow-[0_20px_60px_rgba(0,0,0,0.5)] relative"
+          style={{ transform: 'rotate(-0.5deg)' }}
+        >
+          <div
+            className="text-purple-950 font-bold leading-tight text-center"
+            style={{ fontFamily: "'Gochi Hand', 'Permanent Marker', cursive", fontSize: 'clamp(2rem, 5vw, 4rem)' }}
+          >
+            {item.message}
+          </div>
+          {item.fromName && (
+            <div className="text-purple-600 text-center mt-4" style={{ fontFamily: "'Caveat', cursive", fontSize: 'clamp(1.5rem, 3.5vw, 3rem)' }}>
+              — {item.fromName}
+            </div>
+          )}
+          {/* Instagram handle at bottom-right of bubble */}
+          {item.showHandleOnTv && item.instagramHandle && (
+            <div className="absolute bottom-3 right-4 flex items-center gap-1.5 bg-gradient-to-r from-pink-500/30 to-purple-500/30 border border-pink-500/40 rounded-full px-3 py-1">
+              <InstagramIcon className="w-4 h-4 text-pink-500" />
+              <span className="text-purple-800 font-bold text-xs" style={{ fontFamily: "'Montserrat', sans-serif" }}>
+                {item.instagramHandle}
+              </span>
+            </div>
+          )}
+          {/* Speech bubble tail */}
+          <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 w-0 h-0 border-l-[24px] border-r-[24px] border-t-[24px] border-l-transparent border-r-transparent border-t-purple-50"></div>
         </div>
-      )}
+      </div>
     </div>
   );
 }
 
 function SongView({ item, hideBackground }: { item: Extract<TVItem, { type: 'song' }>; hideBackground?: boolean }) {
   return (
-    <div className={`w-full h-full ${hideBackground ? 'bg-transparent' : 'bg-gradient-to-br from-amber-950 via-black to-yellow-950'} flex flex-col items-center justify-center p-12 text-center`}>
-      <div className="text-5xl sm:text-6xl uppercase tracking-[0.08em] text-amber-400 font-normal whitespace-pre mb-1" style={{ fontFamily: "'Vortax', system-ui, sans-serif" }}>
-        RCH  TV
-      </div>
-      <div className="text-sm uppercase tracking-[0.3em] text-amber-300 mb-8 font-light">Request Now Playing</div>
-      {/* Artist on top — the hero */}
-      <div
-        className={`text-white font-bold leading-tight max-w-4xl text-center ${item.anyTitle ? 'mb-8' : 'mb-2'}`}
-        style={{ fontFamily: "'Orbitron', 'Audiowide', system-ui, sans-serif", fontSize: item.anyTitle ? 'clamp(3.5rem, 9vw, 7rem)' : 'clamp(2.5rem, 7vw, 5rem)' }}
-      >
-        {item.artist}
-      </div>
-      {/* Title below, smaller */}
-      {!item.anyTitle && (
+    <div className={`w-full h-full ${hideBackground ? 'bg-transparent' : 'bg-gradient-to-br from-amber-950 via-black to-yellow-950'} flex flex-col items-center justify-center p-8`}>
+      {/* RCH TV header on grey rounded rect */}
+      <div className="bg-zinc-800/70 backdrop-blur-sm border border-white/10 rounded-2xl px-8 py-3 mb-8 shadow-2xl">
         <div
-          className="text-amber-300 mb-8"
-          style={{ fontFamily: "'Permanent Marker', cursive", fontSize: 'clamp(1.5rem, 4vw, 3rem)' }}
+          className="text-4xl sm:text-5xl uppercase tracking-[0.08em] text-amber-400 font-normal whitespace-pre text-center"
+          style={{ fontFamily: "'Vortax', system-ui, sans-serif" }}
         >
-          {item.title}
+          RCH  TV
         </div>
-      )}
-      {item.requesterName && (
-        <div className="text-zinc-400 text-5xl mb-2" style={{ fontFamily: "'Caveat', cursive" }}>
-          Requested by {item.requesterName}
+        <div className="text-[10px] uppercase tracking-[0.3em] text-amber-300 text-center font-light mt-1">Now Playing</div>
+      </div>
+
+      {/* Song player card - dark with accent rail like End of Night */}
+      <div className="relative max-w-3xl w-full mx-auto" style={{ perspective: '800px' }}>
+        <div
+          className="bg-gradient-to-r from-zinc-800 via-zinc-800 to-amber-700/30 rounded-[2rem] px-10 py-8 shadow-[0_20px_60px_rgba(0,0,0,0.5)] relative overflow-hidden"
+          style={{ transform: 'rotate(0.8deg)' }}
+        >
+          {/* Accent rail */}
+          <div className="absolute left-3 top-4 bottom-4 w-2 rounded-full bg-gradient-to-b from-amber-400 to-amber-600"></div>
+          {/* Inner border */}
+          <div className="absolute left-7 top-5 right-5 bottom-5 rounded-2xl border border-white/10"></div>
+
+          <div className="relative pl-10 pr-4">
+            {/* Artist - hero */}
+            <div
+              className="text-white font-bold leading-tight"
+              style={{ fontFamily: "'Orbitron', 'Audiowide', system-ui, sans-serif", fontSize: 'clamp(2rem, 5.5vw, 4.5rem)' }}
+            >
+              {item.artist}
+            </div>
+            {/* Title - only show if not "anything" */}
+            {!item.anyTitle && (
+              <div
+                className="text-amber-300 mt-2"
+                style={{ fontFamily: "'Permanent Marker', cursive", fontSize: 'clamp(1.2rem, 3vw, 2.5rem)' }}
+              >
+                {item.title}
+              </div>
+            )}
+            {/* Requester chip */}
+            {item.requesterName && (
+              <div
+                className="inline-block mt-4 bg-amber-500/20 border border-amber-500/30 rounded-full px-5 py-1.5 text-amber-300"
+                style={{ fontFamily: "'Caveat', cursive", fontSize: 'clamp(1rem, 2vw, 1.8rem)' }}
+              >
+                Requested by {item.requesterName}
+              </div>
+            )}
+            {/* Instagram handle at bottom-right of card */}
+            {item.showHandleOnTv && item.instagramHandle && (
+              <div className="absolute bottom-3 right-3 flex items-center gap-1.5 bg-gradient-to-r from-amber-500/30 to-yellow-500/30 border border-amber-500/40 rounded-full px-3 py-1">
+                <InstagramIcon className="w-4 h-4 text-amber-400" />
+                <span className="text-amber-200 font-bold text-xs" style={{ fontFamily: "'Montserrat', sans-serif" }}>
+                  {item.instagramHandle}
+                </span>
+              </div>
+            )}
+          </div>
         </div>
-      )}
-      {item.showHandleOnTv && item.instagramHandle && (
-        <div className="mt-4 inline-flex items-center gap-3 bg-gradient-to-r from-amber-500/20 to-yellow-500/20 border border-amber-500/30 rounded-full px-6 py-3">
-          <InstagramIcon className="w-6 h-6 text-amber-400" />
-          <span className="text-white font-bold text-xl" style={{ fontFamily: "'Montserrat', sans-serif" }}>
-            {item.instagramHandle}
-          </span>
-        </div>
-      )}
+      </div>
     </div>
   );
 }

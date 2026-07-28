@@ -16,6 +16,7 @@ const DEFAULTS: Record<string, string> = {
   fame_display_offset: '0',
   fame_completed_fade: '70',
   tv_hide_background: 'false',
+  tv_hide_idle_screen: 'false',
 };
 
 export async function GET() {

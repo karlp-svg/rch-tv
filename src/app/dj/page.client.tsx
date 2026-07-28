@@ -104,6 +104,7 @@ export default function DJAdminPage() {
   const [countdown, setCountdown] = useState<number>(0);
   const [tvQueueLength, setTvQueueLength] = useState<number>(0);
   const [hideBackground, setHideBackground] = useState<boolean>(false);
+  const [hideIdleScreen, setHideIdleScreen] = useState<boolean>(false);
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [famePhotoSize, setFamePhotoSize] = useState(42);
   const [fameCompletedScale, setFameCompletedScale] = useState(70);
@@ -231,6 +232,7 @@ export default function DJAdminPage() {
         if (s.fame_display_offset !== undefined) setFameDisplayOffset(parseInt(s.fame_display_offset, 10));
         if (s.fame_completed_fade) setFameCompletedFade(parseInt(s.fame_completed_fade, 10));
         if (s.tv_hide_background !== undefined) setHideBackground(s.tv_hide_background === 'true');
+        if (s.tv_hide_idle_screen !== undefined) setHideIdleScreen(s.tv_hide_idle_screen === 'true');
       }
     } catch (_) {}
   };
@@ -651,15 +653,6 @@ export default function DJAdminPage() {
                   </button>
                 ))}
               </div>
-              <div className="flex items-center justify-between border-t border-white/5 pt-2">
-                <div className="text-[10px] text-zinc-400 uppercase font-mono">Hide Background</div>
-                <button
-                  onClick={() => updateHideBackground(!hideBackground)}
-                  className={`relative w-9 h-5 rounded-full transition-colors ${hideBackground ? 'bg-purple-500' : 'bg-zinc-700'}`}
-                >
-                  <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-transform ${hideBackground ? 'translate-x-[18px]' : 'translate-x-0.5'}`} />
-                </button>
-              </div>
             </div>
 
             {/* Collapsible OPTIONS section (full width) */}
@@ -737,6 +730,37 @@ export default function DJAdminPage() {
                         >
                           <AtSign className="w-3 h-3" /> Add Handle Manually
                         </button>
+                      </div>
+
+                      {/* Hide Background + Hide Idle Screen */}
+                      <div className="bg-zinc-900/80 border border-white/10 rounded-2xl p-3.5 flex flex-col gap-3">
+                        <div className="text-[10px] text-zinc-400 uppercase font-mono">🎨 TV Overlay</div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] text-zinc-400">Hide Background</span>
+                          <button
+                            onClick={() => updateHideBackground(!hideBackground)}
+                            className={`relative w-9 h-5 rounded-full transition-colors ${hideBackground ? 'bg-purple-500' : 'bg-zinc-700'}`}
+                          >
+                            <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-transform ${hideBackground ? 'translate-x-[18px]' : 'translate-x-0.5'}`} />
+                          </button>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] text-zinc-400">Hide Idle Screen</span>
+                          <button
+                            onClick={async () => {
+                              const next = !hideIdleScreen;
+                              setHideIdleScreen(next);
+                              await fetch('/api/settings', {
+                                method: 'PUT',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ tv_hide_idle_screen: String(next) }),
+                              });
+                            }}
+                            className={`relative w-9 h-5 rounded-full transition-colors ${hideIdleScreen ? 'bg-purple-500' : 'bg-zinc-700'}`}
+                          >
+                            <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-transform ${hideIdleScreen ? 'translate-x-[18px]' : 'translate-x-0.5'}`} />
+                          </button>
+                        </div>
                       </div>
                     </div>
 
