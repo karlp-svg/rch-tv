@@ -136,22 +136,21 @@ export default function TVPage() {
     }
     return (
       <main className={`w-screen h-screen ${hideBackground ? 'bg-transparent' : 'bg-black'} flex flex-col items-center justify-center p-8`}>
-        <div className="text-center mb-8">
+        {/* RCH TV title on a solid grey deck card */}
+        <div className="bg-zinc-800 border border-white/10 rounded-2xl px-10 py-5 mb-8 shadow-2xl">
           <div
-            className="text-7xl sm:text-8xl font-normal tracking-[0.08em] text-transparent bg-clip-text bg-gradient-to-br from-purple-400 via-pink-400 to-purple-600 mb-4 whitespace-pre"
+            className="text-7xl sm:text-8xl font-normal tracking-[0.08em] text-transparent bg-clip-text bg-gradient-to-br from-purple-400 via-pink-400 to-purple-600 whitespace-pre text-center"
             style={{ fontFamily: "'Vortax', 'Orbitron', 'Audiowide', system-ui, sans-serif" }}
           >
             RCH  TV
           </div>
         </div>
         {publicQr ? (
-          <div className="relative">
-            <div className="w-64 h-64 sm:w-80 sm:h-80 bg-black/90 rounded-2xl flex items-center justify-center shadow-[0_0_40px_rgba(0,0,0,0.6)]">
-              <img src={publicQr} alt="Scan to join" className="w-56 h-56 sm:w-[18rem] sm:h-[18rem] object-contain" />
-            </div>
+          <div className="bg-zinc-800 border border-white/10 rounded-2xl w-64 h-64 sm:w-80 sm:h-80 p-5 shadow-2xl flex items-center justify-center">
+            <img src={publicQr} alt="Scan to join" className="w-full h-full object-contain" />
           </div>
         ) : (
-          <div className="w-64 h-64 sm:w-80 sm:h-80 rounded-2xl border-2 border-dashed border-zinc-700 bg-black/40 grid place-items-center text-zinc-600">
+          <div className="bg-zinc-800 border border-white/10 rounded-2xl w-64 h-64 sm:w-80 sm:h-80 p-5 shadow-2xl grid place-items-center text-zinc-500">
             Loading QR...
           </div>
         )}
@@ -176,25 +175,39 @@ export default function TVPage() {
 
 // Instagram handle sticker — matches the End of Night grayscale sticker.
 // Sits at the bottom-right of its parent, half hanging over the bottom edge.
-const HANDLE_FONT_SIZE = 'clamp(1.75rem, 2.5vw, 3.25rem)';
+// Base size is already 75% of the original TV sticker size.
+const HANDLE_FONT_SIZE = 'clamp(1.3125rem, 1.875vw, 2.4375rem)';
 
-function HandleSticker({ handle, rotationDeg = 0 }: { handle: string; rotationDeg?: number }) {
+function HandleSticker({
+  handle,
+  right = '2.5rem',
+  keepLevel = false,
+  parentRotationDeg = 0,
+}: {
+  handle: string;
+  right?: string | number;
+  /** When true, counter-rotates against a rotated parent so the sticker stays upright */
+  keepLevel?: boolean;
+  parentRotationDeg?: number;
+}) {
   const clean = handle.replace(/^@+/, '').trim();
   if (!clean) return null;
+  const levelFix = keepLevel ? ` rotate(${-parentRotationDeg}deg)` : '';
   return (
     <div
-      className="absolute bottom-0 right-10 z-30 flex items-center whitespace-nowrap rounded-full shadow-[0_14px_38px_rgba(0,0,0,0.55)]"
+      className="absolute bottom-0 z-30 flex items-center whitespace-nowrap rounded-full shadow-[0_14px_38px_rgba(0,0,0,0.55)]"
       style={{
+        right,
         fontSize: HANDLE_FONT_SIZE,
-        gap: '0.38em',
-        padding: '0.4em 0.62em',
+        gap: '0.22em',
+        padding: '0.18em 0.42em',
         border: '2px solid rgba(255,255,255,0.4)',
         background: 'linear-gradient(135deg, #555555 0%, #333333 50%, #1a1a1a 100%)',
-        // half over the bottom edge
-        transform: `translateY(50%) rotate(${rotationDeg}deg)`,
+        // translateY hangs half over the bottom edge. keepLevel cancels a rotated parent.
+        transform: `translateY(50%)${levelFix}`,
       }}
     >
-      <InstagramIcon className="text-white shrink-0" style={{ width: '1.15em', height: '1.15em' }} />
+      <InstagramIcon className="text-white shrink-0" style={{ width: '1.05em', height: '1.05em' }} />
       <span
         className="font-bold leading-none text-white"
         style={{ fontFamily: "'Montserrat', sans-serif", textShadow: '0 1px 3px rgba(0,0,0,0.25)' }}
@@ -216,8 +229,8 @@ function ShoutoutView({ item, hideBackground }: { item: Extract<TVItem, { type: 
       className={`w-full h-full ${hideBackground ? 'bg-transparent' : ''} flex flex-col items-center justify-center p-8`}
       style={hideBackground ? undefined : { background: 'linear-gradient(135deg, #2a0845 0%, #000000 50%, #1a1a2e 100%)' }}
     >
-      {/* RCH TV header on grey rounded rect */}
-      <div className="bg-zinc-800/70 backdrop-blur-sm border border-white/10 rounded-2xl px-8 py-3 mb-14 shadow-2xl">
+      {/* RCH TV header on solid grey deck card */}
+      <div className="bg-zinc-800 border border-white/10 rounded-2xl px-8 py-3 mb-14 shadow-2xl">
         <div
           className="text-4xl sm:text-5xl uppercase tracking-[0.08em] font-normal whitespace-pre text-center"
           style={{ fontFamily: "'Vortax', system-ui, sans-serif", color: '#c084fc' }}
@@ -266,7 +279,7 @@ function ShoutoutView({ item, hideBackground }: { item: Extract<TVItem, { type: 
 
           {/* Instagram handle sticker — bottom right, half over the bottom edge */}
           {item.showHandleOnTv && item.instagramHandle && (
-            <HandleSticker handle={item.instagramHandle} rotationDeg={rotDeg} />
+            <HandleSticker handle={item.instagramHandle} />
           )}
         </div>
       </div>
@@ -292,11 +305,11 @@ function SongView({ item, hideBackground }: { item: Extract<TVItem, { type: 'son
           : { background: 'linear-gradient(135deg, #1a1a2e 0%, #0f0f23 30%, #16213e 60%, #0a0a0a 100%)' }
       }
     >
-      {/* RCH TV header on grey rounded rect */}
-      <div className="bg-zinc-800/70 backdrop-blur-sm border border-white/10 rounded-2xl px-8 py-3 mb-14 shadow-2xl">
+      {/* RCH TV header on solid grey deck card — title matches deck highlight accent */}
+      <div className="bg-zinc-800 border border-white/10 rounded-2xl px-8 py-3 mb-14 shadow-2xl">
         <div
           className="text-4xl sm:text-5xl uppercase tracking-[0.08em] font-normal whitespace-pre text-center"
-          style={{ fontFamily: "'Vortax', system-ui, sans-serif", color: '#1DB954' }}
+          style={{ fontFamily: "'Vortax', system-ui, sans-serif", color: accent }}
         >
           RCH  TV
         </div>
@@ -345,7 +358,7 @@ function SongView({ item, hideBackground }: { item: Extract<TVItem, { type: 'son
               </div>
             </div>
 
-            {/* Artist on top, title below */}
+            {/* Artist on top, title below (only when not 'anything'), requester below that */}
             <div className="min-w-0 flex-1">
               <div
                 className="text-white font-bold leading-tight truncate"
@@ -353,16 +366,29 @@ function SongView({ item, hideBackground }: { item: Extract<TVItem, { type: 'son
               >
                 {item.artist}
               </div>
-              <div
-                className="mt-2 truncate"
-                style={{
-                  fontFamily: "'Permanent Marker', cursive",
-                  fontSize: 'clamp(1.25rem, 3vw, 2.6rem)',
-                  color: item.anyTitle ? accent : '#e4e4e7',
-                }}
-              >
-                {item.anyTitle ? 'Anything' : item.title}
-              </div>
+              {!item.anyTitle && item.title && (
+                <div
+                  className="mt-2 truncate text-zinc-200"
+                  style={{
+                    fontFamily: "'Permanent Marker', cursive",
+                    fontSize: 'clamp(1.25rem, 3vw, 2.6rem)',
+                  }}
+                >
+                  {item.title}
+                </div>
+              )}
+              {item.requesterName && (
+                <div
+                  className="mt-1 truncate"
+                  style={{
+                    fontFamily: "'Caveat', cursive",
+                    fontSize: 'clamp(1.1rem, 2.2vw, 2rem)',
+                    color: 'rgba(255,255,255,0.78)',
+                  }}
+                >
+                  requested by {item.requesterName}
+                </div>
+              )}
             </div>
 
             {/* Decorative waveform bars at the far right */}
@@ -383,24 +409,9 @@ function SongView({ item, hideBackground }: { item: Extract<TVItem, { type: 'son
 
           {/* Instagram handle sticker — bottom right, half over the bottom edge */}
           {item.showHandleOnTv && item.instagramHandle && (
-            <HandleSticker handle={item.instagramHandle} rotationDeg={rotDeg} />
+            <HandleSticker handle={item.instagramHandle} />
           )}
         </div>
-
-        {/* Requester below the card, left aligned — matches End of Night meta row */}
-        {item.requesterName && (
-          <div
-            className="mt-5 pl-6"
-            style={{
-              fontFamily: "'Caveat', cursive",
-              fontSize: 'clamp(1.2rem, 2.2vw, 2.1rem)',
-              color: 'rgba(255,255,255,0.78)',
-              transform: `rotate(${rotDeg}deg)`,
-            }}
-          >
-            requested by {item.requesterName}
-          </div>
-        )}
       </div>
     </div>
   );
@@ -514,19 +525,33 @@ function FameView({ item, completedFame, fameSettings, hideBackground }: { item:
         </div>
 
         <div className="absolute inset-0 z-20 flex items-center justify-center">
-          <img
-            src={imgSrc}
-            alt="Make me famous"
-            className="object-contain shadow-[0_25px_60px_rgba(0,0,0,0.95)] rounded-md filter drop-shadow-[0_20px_35px_rgba(0,0,0,0.9)]"
-            style={{
-              maxHeight: `${photoSize}vh`,
-              maxWidth: `${photoSize}vw`,
-              transform: `rotate(${rotation}deg)`,
-            }}
-            onError={(e) => {
-              (e.currentTarget as HTMLImageElement).src = `${IMAGE_PROXY_BASE}${item.id}`;
-            }}
-          />
+          {/* Rotating wrapper so the polaroid tilts, while the handle can stay level */}
+          <div
+            className="relative inline-block"
+            style={{ transform: `rotate(${rotation}deg)` }}
+          >
+            <img
+              src={imgSrc}
+              alt="Make me famous"
+              className="object-contain shadow-[0_25px_60px_rgba(0,0,0,0.95)] rounded-md filter drop-shadow-[0_20px_35px_rgba(0,0,0,0.9)] block"
+              style={{
+                maxHeight: `${photoSize}vh`,
+                maxWidth: `${photoSize}vw`,
+              }}
+              onError={(e) => {
+                (e.currentTarget as HTMLImageElement).src = `${IMAGE_PROXY_BASE}${item.id}`;
+              }}
+            />
+            {/* Handle: bottom-right, half over photo / onto white polaroid frame, no tilt */}
+            {item.showHandleOnTv && item.instagramHandle && (
+              <HandleSticker
+                handle={item.instagramHandle}
+                right="0.75rem"
+                keepLevel
+                parentRotationDeg={rotation}
+              />
+            )}
+          </div>
         </div>
       </div>
     </div>
