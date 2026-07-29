@@ -279,14 +279,14 @@ function ShoutoutView({ item, hideBackground, rotationRange, wobbling }: { item:
         </div>
       </div>
 
-      {/* Speech bubble — End of Night style: flat purple fill, tail angled out to the LEFT */}
+      {/* Simple speech bubble – flat purple fill, tail angled out to the LEFT */}
       <div className="relative w-full max-w-[64rem] mx-auto">
         <div
           className={`relative rounded-[2rem] px-14 py-12 shadow-[0_20px_60px_rgba(0,0,0,0.5)] ${wobbling ? 'tv-card-wobble' : ''}`}
           style={{
             background: bubbleFill,
             transform: `rotate(${rotDeg}deg)`,
-            '--tv-rest-rotation': `${rotDeg}deg`,
+            ['--tv-rest-rotation' as any]: `${rotDeg}deg`,
           } as React.CSSProperties}
         >
           <div
@@ -551,17 +551,19 @@ function FameView({ item, completedFame, fameSettings, hideBackground }: { item:
           className="absolute inset-x-0 z-30 text-center pointer-events-none"
           style={{ top: `${fameSettings.titleOffset}%` }}
         >
-          <div
-            className="text-5xl sm:text-6xl uppercase tracking-[0.08em] text-pink-400 font-normal whitespace-pre -mb-3 drop-shadow-[0_6px_14px_rgba(0,0,0,0.95)]"
-            style={{ fontFamily: "'Vortax', system-ui, sans-serif", WebkitTextStroke: '2px black' }}
-          >
-            RCH  TV
-          </div>
-          <div
-            className="text-6xl sm:text-7xl uppercase tracking-[0.02em] text-white font-bold drop-shadow-[0_8px_20px_rgba(0,0,0,0.95)]"
-            style={{ fontFamily: "'Westmeath', 'Montserrat', sans-serif", WebkitTextStroke: '3px black' }}
-          >
-            Wall of Fame
+          <div className="inline-block bg-zinc-800 border border-white/10 rounded-2xl px-8 py-4 shadow-2xl">
+            <div
+              className="text-4xl sm:text-5xl uppercase tracking-[0.08em] text-pink-400 font-normal whitespace-pre mb-1 drop-shadow-[0_4px_10px_rgba(0,0,0,0.8)]"
+              style={{ fontFamily: "'Vortax', system-ui, sans-serif" }}
+            >
+              RCH  TV
+            </div>
+            <div
+              className="text-5xl sm:text-6xl uppercase tracking-[0.02em] text-white font-bold drop-shadow-[0_6px_16px_rgba(0,0,0,0.8)]"
+              style={{ fontFamily: "'Westmeath', 'Montserrat', sans-serif" }}
+            >
+              Wall of Fame
+            </div>
           </div>
         </div>
 

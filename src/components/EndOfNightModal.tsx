@@ -467,7 +467,7 @@ function generateShoutoutsPost(items: ShoutItem[], tagline: string): string {
       const fw = ctx.measureText(`— ${item.fromName}`).width;
       if (fw > maxLineW) maxLineW = fw;
     }
-    const bubbleW = Math.min(900, Math.max(340, maxLineW + 110));
+    const bubbleW = Math.min(900, Math.max(360, maxLineW + 130));
     const fromH = item.fromName ? (fromFontSize + 8) : 0;
     const bubbleH = lines.length * lineH + fromH + padVertical;
 
@@ -480,14 +480,14 @@ function generateShoutoutsPost(items: ShoutItem[], tagline: string): string {
     ctx.translate(cx, cy);
     ctx.rotate(rot);
 
-    // speech bubble
+    // simple speech bubble – flat purple fill, tail angled left
     ctx.shadowColor = 'rgba(0,0,0,0.5)';
     ctx.shadowBlur = 20;
     ctx.shadowOffsetY = 8;
     ctx.fillStyle = i % 2 === 0 ? '#f3e8ff' : '#e9d5ff';
     roundRect(ctx, -bubbleW/2, -bubbleH/2, bubbleW, bubbleH, 32);
     ctx.fill();
-    // tail — always on LEFT side of centre so sticker doesn't cover it
+    // tail — on LEFT side so sticker doesn't cover it
     ctx.beginPath();
     const tailX = -bubbleW/3;
     ctx.moveTo(tailX - 22, bubbleH/2 - 2);
@@ -497,6 +497,7 @@ function generateShoutoutsPost(items: ShoutItem[], tagline: string): string {
     ctx.fill();
     ctx.shadowColor = 'transparent';
 
+    // text – kept inside bubble bounds
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
     ctx.fillStyle = '#2a0845';

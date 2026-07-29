@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
-import { Music, Tv, Star, Clock, CheckCircle2, XCircle, Loader2, Trash2, PlayCircle, ExternalLink, RefreshCw, Shield, Download, AtSign, Moon, QrCode, X } from 'lucide-react';
+import { Music, Tv, Star, Clock, CheckCircle2, XCircle, Loader2, Trash2, PlayCircle, ExternalLink, RefreshCw, Shield, Download, AtSign, Moon, QrCode, X, ArrowLeft } from 'lucide-react';
 import EndOfNightModal from '@/components/EndOfNightModal';
 import QRCode from 'qrcode';
 
@@ -17,7 +17,7 @@ type AdminData = {
   fameSubmissions: FameSubmission[];
 };
 
-type Tab = 'shoutout' | 'song' | 'fame';
+type Tab = 'shoutout' | 'song' | 'fame' | 'all';
 
 const statusConfig: Record<Status, { label: string; color: string; icon: typeof Clock }> = {
   verifying: { label: 'Verifying', color: 'bg-yellow-400/10 text-yellow-400 border-yellow-400/30', icon: Clock },
@@ -43,6 +43,7 @@ const TAB_LABELS: Record<Tab, string> = {
   shoutout: 'shoutouts',
   song: 'song requests',
   fame: 'photos',
+  all: 'all requests',
 };
 
 async function downloadImage(src: string, id: number, name?: string | null) {
@@ -541,11 +542,20 @@ export default function DJAdminPage() {
     let items: (Shoutout | SongRequest | FameSubmission)[] = [];
     if (tab === 'shoutout') items = data.shoutouts;
     else if (tab === 'song') items = data.songRequests;
-    else items = data.fameSubmissions;
+    else if (tab === 'fame') items = data.fameSubmissions;
+    else if (tab === 'all') {
+      items = [
+        ...data.shoutouts.map(i => ({ ...i, _requestType: 'shoutout' as const })),
+        ...data.songRequests.map(i => ({ ...i, _requestType: 'song' as const })),
+        ...data.fameSubmissions.map(i => ({ ...i, _requestType: 'fame' as const })),
+      ];
+    }
     
     if (filter === 'active') {
       items = items.filter(i => i.status === 'verifying' || i.status === 'queued' || i.status === 'in_progress');
-    } else if (filter !== 'all') {
+    } else if (filter !== 'all' && tab !== 'all') {
+      items = items.filter(i => i.status === filter);
+    } else if (filter !== 'all' && tab === 'all') {
       items = items.filter(i => i.status === filter);
     }
     return items;
@@ -1312,7 +1322,8 @@ export default function DJAdminPage() {
         )}
 
         {/* Tabs */}
-        <div className="grid grid-cols-3 gap-2 mb-4">
+        <div className="grid grid-cols-4 gap-2 mb-4">
+          <TabButton active={tab === 'all'} onClick={() => setTab('all')} icon={<ArrowLeft className="w-4 h-4 rotate-[-135deg]" />} label="All Requests" count={stats.shoutout + stats.song + stats.fame} color="rose" />
           <TabButton active={tab === 'shoutout'} onClick={() => setTab('shoutout')} icon={<Tv className="w-4 h-4" />} label="Shoutouts" count={stats.shoutout} color="purple" />
           <TabButton active={tab === 'song'} onClick={() => setTab('song')} icon={<Music className="w-4 h-4" />} label="Songs" count={stats.song} color="amber" />
           <TabButton active={tab === 'fame'} onClick={() => setTab('fame')} icon={<Star className="w-4 h-4" />} label="Photos" count={stats.fame} color="pink" />
@@ -1374,18 +1385,22 @@ export default function DJAdminPage() {
               {loading ? 'Loading...' : 'Nothing here'}
             </div>
           ) : (
-            currentItems().map(item => (
-              <AdminCard
-                key={`${tab}-${item.id}`}
-                type={tab}
-                item={item}
-                updating={updatingId === item.id}
-                onUpdate={(status) => updateStatus(tab, item.id, status)}
-                onDelete={() => deleteItem(tab, item.id)}
-                onImageClick={(src) => setFullscreenImage(src)}
-                onVerifyFollower={handleVerifyFollower}
-              />
-            ))
+            currentItems().map((item: any) => {
+              const itemType: 'shoutout' | 'song' | 'fame' =
+                tab === 'all' ? (item._requestType || 'shoutout') : (tab as 'shoutout' | 'song' | 'fame');
+              return (
+                <AdminCard
+                  key={`${itemType}-${item.id}`}
+                  itemType={itemType}
+                  item={item}
+                  updating={updatingId === item.id}
+                  onUpdate={(status) => updateStatus(itemType, item.id, status)}
+                  onDelete={() => deleteItem(itemType, item.id)}
+                  onImageClick={(src: string) => setFullscreenImage(src)}
+                  onVerifyFollower={handleVerifyFollower}
+                />
+              );
+            })
           )}
         </div>
       </div>
@@ -1437,8 +1452,14 @@ function TabButton({ active, onClick, icon, label, count, color }: {
   );
 }
 
-function AdminCard({ type, item, updating, onUpdate, onDelete, onImageClick, onVerifyFollower }: {
-  type: Tab;
+const REQUEST_TYPE_META: Record<'shoutout' | 'song' | 'fame', { icon: typeof Tv; label: string; wrapBg: string; iconColor: string }> = {
+  shoutout: { icon: Tv, label: 'Shoutout', wrapBg: 'bg-purple-500/10 border-purple-500/20', iconColor: 'text-purple-400' },
+  song: { icon: Music, label: 'Song', wrapBg: 'bg-amber-500/10 border-amber-500/20', iconColor: 'text-amber-400' },
+  fame: { icon: Star, label: 'Photo', wrapBg: 'bg-pink-500/10 border-pink-500/20', iconColor: 'text-pink-400' },
+};
+
+function AdminCard({ itemType, item, updating, onUpdate, onDelete, onImageClick, onVerifyFollower }: {
+  itemType: 'shoutout' | 'song' | 'fame';
   item: Shoutout | SongRequest | FameSubmission;
   updating: boolean;
   onUpdate: (status: Status) => void;
@@ -1448,9 +1469,19 @@ function AdminCard({ type, item, updating, onUpdate, onDelete, onImageClick, onV
 }) {
   const config = statusConfig[item.status];
   const Icon = config.icon;
+  const typeMeta = REQUEST_TYPE_META[itemType];
+  const TypeIcon = typeMeta.icon;
+  const type = itemType;
 
   return (
-    <div className="bg-zinc-900 border border-white/10 rounded-2xl p-4 sm:p-5">
+    <div className="bg-zinc-900 border border-white/10 rounded-2xl overflow-hidden flex">
+      {/* Request type identifier — full row height, left side */}
+      <div className={`shrink-0 w-16 sm:w-20 flex flex-col items-center justify-center gap-1.5 border-r ${typeMeta.wrapBg}`}>
+        <TypeIcon className={`w-5 h-5 sm:w-6 sm:h-6 ${typeMeta.iconColor}`} />
+        <span className={`text-[9px] sm:text-[10px] font-bold uppercase tracking-wide ${typeMeta.iconColor}`}>{typeMeta.label}</span>
+      </div>
+
+      <div className="flex-1 min-w-0 p-4 sm:p-5">
       <div className="flex flex-col sm:flex-row gap-4">
         {/* Content */}
         <div className="flex-1 min-w-0">
@@ -1664,6 +1695,7 @@ function AdminCard({ type, item, updating, onUpdate, onDelete, onImageClick, onV
             <Trash2 className="w-3.5 h-3.5" />
           </button>
         </div>
+      </div>
       </div>
     </div>
   );
