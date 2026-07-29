@@ -585,6 +585,11 @@ function FameView({ item, completedFame, fameSettings, hideBackground }: { item:
                 (e.currentTarget as HTMLImageElement).src = `${IMAGE_PROXY_BASE}${item.id}`;
               }}
             />
+            {/* Polaroid "developing" overlay — starts slate-blue #8499a0, fades out over 8s */}
+            <div
+              className="absolute inset-0 pointer-events-none rounded-md"
+              style={{ background: '#8499a0', animation: 'polaroid-develop 8s ease-out forwards' }}
+            />
             {/* Handle sticker intentionally omitted for fame — already drawn on the polaroid itself */}
           </div>
         </div>

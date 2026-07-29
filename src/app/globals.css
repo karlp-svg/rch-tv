@@ -35,6 +35,11 @@
   animation: tv-card-wobble 800ms ease-in-out;
 }
 
+@keyframes polaroid-develop {
+  0% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .tv-card-wobble { animation: none; }
 }
