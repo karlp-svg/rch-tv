@@ -41,12 +41,23 @@ async function buildContext(postType: PostType, chosen: ChosenItems) {
     }).from(fameSubmissions).where(eq(fameSubmissions.status, 'complete')).orderBy(desc(fameSubmissions.createdAt)).limit(40),
   ]);
 
-  const filterOrAll = <T extends { id: number }>(rows: T[], ids?: number[]) =>
-    ids && ids.length > 0 ? rows.filter(r => ids.includes(r.id)) : rows;
+  const filterSelectedOnly = <T extends { id: number }>(rows: T[], ids?: number[]) => {
+    if (!ids || ids.length === 0) return [];
+    const selectedIds = new Set(ids);
+    return rows.filter(r => selectedIds.has(r.id));
+  };
 
-  const chosenShouts = filterOrAll(completedShouts, chosen.shoutIds).slice(0, 12);
-  const chosenSongs = filterOrAll(completedSongs, chosen.songIds).slice(0, 12);
-  const chosenPhotos = filterOrAll(completedPhotos as any, chosen.photoIds).slice(0, 12);
+  // Only the selected items for the active post type should influence the AI tagline.
+  // Do not fall back to "all completed" and do not mix in other categories.
+  const chosenShouts = postType === 'shoutouts'
+    ? filterSelectedOnly(completedShouts, chosen.shoutIds).slice(0, 12)
+    : [];
+  const chosenSongs = postType === 'songs'
+    ? filterSelectedOnly(completedSongs, chosen.songIds).slice(0, 12)
+    : [];
+  const chosenPhotos = postType === 'photos'
+    ? filterSelectedOnly(completedPhotos as any, chosen.photoIds).slice(0, 12)
+    : [];
 
   return {
     postType,
@@ -77,19 +88,20 @@ You are writing the bottom-of-post caption for a "${focus}" end-of-night highlig
 
 Vibe: warm, in-jokey, party crowd, cheeky but never mean. It's meant to feel like the DJ recapping the night to their friends.
 
-Tonight's crowd shoutouts (from the screens):
+Selected crowd shoutouts for this post:
 ${shoutsBlock}
 
-Tonight's song requests:
+Selected song requests for this post:
 ${songsBlock}
 
-Tonight's Wall of Fame photo captions/names:
+Selected Wall of Fame photo captions/names for this post:
 ${photosBlock}
 
 Rules:
 - One sentence. Absolute max 90 characters. Ideally 40–70.
 - Playful, human, first-person from the DJ or the crowd's point of view is fine.
-- Where possible, tie the caption to a specific detail from the shoutouts/songs/photos above (e.g. a birthday name, a song mentioned, a group name) — but do NOT quote a whole shoutout. Just riff on it.
+- Only use the selected items above. Do not invent, reference, or imply any unselected requests.
+- Where possible, tie the caption to a specific detail from the selected items above (e.g. a birthday name, a song mentioned, a group name) — but do NOT quote a whole shoutout. Just riff on it.
 - 1 emoji max (or none). No hashtags. No @mentions.
 - No quotes around the output. Return ONLY the caption text, nothing else.`;
 }
@@ -325,11 +337,30 @@ export async function POST(request: Request) {
       });
     }
 
-    const ctx = await buildContext(postType, {
-      shoutIds: Array.isArray(body?.shoutIds) ? body.shoutIds.map((n: any) => Number(n)).filter(Number.isFinite) : undefined,
-      songIds: Array.isArray(body?.songIds) ? body.songIds.map((n: any) => Number(n)).filter(Number.isFinite) : undefined,
-      photoIds: Array.isArray(body?.photoIds) ? body.photoIds.map((n: any) => Number(n)).filter(Number.isFinite) : undefined,
-    });
+    const parseIds = (value: unknown) =>
+      Array.isArray(value) ? value.map((n: any) => Number(n)).filter(Number.isFinite) : [];
+
+    const selectedIds: ChosenItems = {
+      shoutIds: postType === 'shoutouts' ? parseIds(body?.shoutIds) : [],
+      songIds: postType === 'songs' ? parseIds(body?.songIds) : [],
+      photoIds: postType === 'photos' ? parseIds(body?.photoIds) : [],
+    };
+
+    const activeIds = postType === 'shoutouts'
+      ? selectedIds.shoutIds
+      : postType === 'songs'
+        ? selectedIds.songIds
+        : selectedIds.photoIds;
+
+    if (!activeIds || activeIds.length === 0) {
+      return NextResponse.json({ error: 'Select at least one item before generating an AI caption.' }, { status: 400 });
+    }
+
+    const ctx = await buildContext(postType, selectedIds);
+    const matchedCount = ctx.shouts.length + ctx.songs.length + ctx.photos.length;
+    if (matchedCount === 0) {
+      return NextResponse.json({ error: 'None of the selected items are available for AI captioning.' }, { status: 400 });
+    }
     const prompt = buildPrompt(ctx);
 
     let caption = '';

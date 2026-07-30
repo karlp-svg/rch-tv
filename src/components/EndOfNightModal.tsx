@@ -720,12 +720,18 @@ export default function EndOfNightModal({ open, onClose }: { open: boolean; onCl
   };
 
   const generateAiCaption = async () => {
+    if (selected.size === 0) {
+      setAiError('Select at least one item first so AI only uses your chosen requests.');
+      return;
+    }
+
     setAiLoading(true);
     setAiError(null);
     try {
-      const shoutIds = postType === 'shoutouts' && selected.size > 0 ? Array.from(selected) : undefined;
-      const songIds = postType === 'songs' && selected.size > 0 ? Array.from(selected) : undefined;
-      const photoIds = postType === 'photos' && selected.size > 0 ? Array.from(selected) : undefined;
+      const selectedIds = Array.from(selected);
+      const shoutIds = postType === 'shoutouts' ? selectedIds : [];
+      const songIds = postType === 'songs' ? selectedIds : [];
+      const photoIds = postType === 'photos' ? selectedIds : [];
       const res = await fetch('/api/ai-caption', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...getDJAuth() },
@@ -952,8 +958,8 @@ export default function EndOfNightModal({ open, onClose }: { open: boolean; onCl
                 <div className="flex items-center gap-2">
                   <button
                     onClick={generateAiCaption}
-                    disabled={aiLoading}
-                    title="Reads tonight's shoutouts, songs and photo captions and writes a catchy tie-in"
+                    disabled={aiLoading || selected.size === 0}
+                    title="Uses only the selected items for this post type to write a catchy tie-in"
                     className="flex items-center gap-1 text-[10px] bg-fuchsia-500/15 hover:bg-fuchsia-500/25 border border-fuchsia-500/30 text-fuchsia-300 px-2.5 py-1 rounded-full transition disabled:opacity-50"
                   >
                     {aiLoading
