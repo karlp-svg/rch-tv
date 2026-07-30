@@ -98,8 +98,16 @@ const SYSTEM_MSG = 'You are a witty short-form copywriter. Output the caption te
 
 // ─── Provider callers ───────────────────────────────────────────────
 
-async function callGemini(prompt: string, apiKey: string): Promise<string> {
-  const model = process.env.GEMINI_MODEL || 'gemini-2.0-flash';
+// Gemini free-tier model fallback chain. Some accounts/regions have
+// gemini-2.0-flash rate-limited to 0 on the free tier, so we try
+// multiple models before giving up.
+const GEMINI_MODELS = [
+  'gemini-2.0-flash-lite',
+  'gemini-1.5-flash',
+  'gemini-2.0-flash',
+];
+
+async function callGeminiModel(prompt: string, apiKey: string, model: string): Promise<string> {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
   const res = await fetch(url, {
     method: 'POST',
@@ -109,10 +117,32 @@ async function callGemini(prompt: string, apiKey: string): Promise<string> {
       generationConfig: { temperature: 0.9, maxOutputTokens: 100 },
     }),
   });
-  if (!res.ok) throw new Error(`Gemini ${res.status}: ${await res.text()}`);
+  if (!res.ok) throw new Error(`Gemini/${model} ${res.status}: ${await res.text()}`);
   const data = await res.json();
   const text = data?.candidates?.[0]?.content?.parts?.[0]?.text?.toString().trim() || '';
   return text.replace(/^["'""'']+|["'""'']+$/g, '').trim();
+}
+
+async function callGemini(prompt: string, apiKey: string): Promise<string> {
+  // If user explicitly set a model, only try that one
+  const explicit = process.env.GEMINI_MODEL;
+  if (explicit) return callGeminiModel(prompt, apiKey, explicit);
+
+  // Otherwise try the free-tier-friendly models in order
+  let lastErr: Error | null = null;
+  for (const model of GEMINI_MODELS) {
+    try {
+      return await callGeminiModel(prompt, apiKey, model);
+    } catch (e: any) {
+      console.error(`Gemini model ${model} failed:`, e?.message?.slice(0, 200));
+      lastErr = e;
+      // If it's a 429 (rate limit / quota), try the next model
+      if (e?.message?.includes('429')) continue;
+      // For other errors (auth, bad request) don't bother trying more models
+      throw e;
+    }
+  }
+  throw lastErr || new Error('All Gemini models exhausted');
 }
 
 async function callGroq(prompt: string, apiKey: string): Promise<string> {
