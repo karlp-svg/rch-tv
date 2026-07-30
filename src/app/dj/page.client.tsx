@@ -115,6 +115,7 @@ export default function DJAdminPage() {
   const [fameTitleOffset, setFameTitleOffset] = useState(22);
   const [fameDisplayOffset, setFameDisplayOffset] = useState(0);
   const [fameCompletedFade, setFameCompletedFade] = useState(70);
+  const [fameExposureSeconds, setFameExposureSeconds] = useState(8);
   const [shoutoutRotation, setShoutoutRotation] = useState(5);
   const [songRotation, setSongRotation] = useState(5);
   const [tvWobbleSeconds, setTvWobbleSeconds] = useState(0);
@@ -254,6 +255,7 @@ export default function DJAdminPage() {
         if (s.fame_title_offset) setFameTitleOffset(parseInt(s.fame_title_offset, 10));
         if (s.fame_display_offset !== undefined) setFameDisplayOffset(parseInt(s.fame_display_offset, 10));
         if (s.fame_completed_fade) setFameCompletedFade(parseInt(s.fame_completed_fade, 10));
+        if (s.fame_exposure_seconds) setFameExposureSeconds(parseInt(s.fame_exposure_seconds, 10));
         if (s.shoutout_rotation !== undefined) setShoutoutRotation(parseInt(s.shoutout_rotation, 10));
         if (s.song_rotation !== undefined) setSongRotation(parseInt(s.song_rotation, 10));
         if (s.tv_card_wobble_seconds !== undefined) setTvWobbleSeconds(parseInt(s.tv_card_wobble_seconds, 10) || 0);
@@ -944,6 +946,15 @@ export default function DJAdminPage() {
                             onTouchEnd={async () => { await djFetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fame_completed_fade: String(fameCompletedFade) }) }); }}
                             className="flex-1 accent-pink-500 h-6" />
                           <span className="text-[10px] text-pink-400 font-mono w-8 text-right">{fameCompletedFade}%</span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <label className="text-[9px] text-zinc-500 w-20 shrink-0">Exposure</label>
+                          <input type="range" min={1} max={30} step={1} value={fameExposureSeconds}
+                            onChange={(e) => setFameExposureSeconds(parseInt(e.target.value, 10))}
+                            onMouseUp={async () => { await djFetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fame_exposure_seconds: String(fameExposureSeconds) }) }); }}
+                            onTouchEnd={async () => { await djFetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fame_exposure_seconds: String(fameExposureSeconds) }) }); }}
+                            className="flex-1 accent-pink-500 h-6" />
+                          <span className="text-[10px] text-pink-400 font-mono w-8 text-right">{fameExposureSeconds}s</span>
                         </div>
                         <div className="text-[9px] text-zinc-500 mt-1">Controls random ±° rotation applied to TV shoutout bubbles and song request deck cards.</div>
                         <div className="flex items-center gap-3">

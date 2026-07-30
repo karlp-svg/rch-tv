@@ -127,6 +127,7 @@ export async function GET() {
         titleOffset: parseInt(settings.fame_title_offset || '22', 10),
         displayOffset: parseInt(settings.fame_display_offset || '0', 10),
         completedFade: parseInt(settings.fame_completed_fade || '70', 10),
+        exposureSeconds: Math.max(1, Math.min(30, parseInt(settings.fame_exposure_seconds || '8', 10))),
       },
       hideBackground: settings.tv_hide_background === 'true',
       lastUpdate,
