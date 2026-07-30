@@ -48,9 +48,9 @@ export default function OnTvLiveBadge() {
   };
 
   return (
-    <div className="px-3 py-1.5 bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-[11px] font-mono rounded-full flex items-center gap-2 max-w-[220px] sm:max-w-xs truncate shadow-lg">
-      <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse shrink-0"></div>
-      <span className="truncate font-semibold tracking-tight">{getDisplayText()}</span>
+    <div className="px-2.5 py-1 bg-white/10 rounded-full text-[10px] flex items-center gap-1.5">
+      <div className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse"></div>
+      {getDisplayText()}
     </div>
   );
 }

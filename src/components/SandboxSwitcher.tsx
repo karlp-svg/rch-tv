@@ -8,9 +8,7 @@ export default function SandboxSwitcher() {
   const pathname = usePathname();
   const [mounted, setMounted] = useState(false);
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  useEffect(() => { setMounted(true); }, []);
 
   if (!mounted) return null;
 
@@ -22,42 +20,12 @@ export default function SandboxSwitcher() {
   if (target === 'dj' || target === 'tv') return null;
 
   return (
-    <div className="fixed top-2 right-2 z-[9999] flex items-center gap-1 bg-zinc-900/90 backdrop-blur-md border border-white/20 p-1.5 rounded-full shadow-2xl text-[11px] font-mono text-white">
-      <span className="text-zinc-400 pl-2 pr-1 font-semibold text-[9px] uppercase tracking-wider hidden sm:inline">Sandbox:</span>
-      
-      <Link
-        href="/dashboard"
-        className={`px-3 py-1 rounded-full transition-colors font-medium ${
-          pathname === '/' || pathname === '/dashboard' || pathname === '/shoutout' || pathname === '/song-request' || pathname === '/make-famous'
-            ? 'bg-purple-600 text-white font-bold'
-            : 'text-zinc-400 hover:text-white hover:bg-white/10'
-        }`}
-      >
-        📱 User App
-      </Link>
-
-      <Link
-        href="/dj"
-        className={`px-3 py-1 rounded-full transition-colors font-medium ${
-          pathname.startsWith('/dj')
-            ? 'bg-amber-600 text-white font-bold'
-            : 'text-zinc-400 hover:text-white hover:bg-white/10'
-        }`}
-      >
-        🎛️ DJ Console
-      </Link>
-
-      <Link
-        href="/tv"
-        target="_blank"
-        className={`px-3 py-1 rounded-full transition-colors font-medium ${
-          pathname.startsWith('/tv')
-            ? 'bg-emerald-600 text-white font-bold'
-            : 'text-zinc-400 hover:text-white hover:bg-white/10'
-        }`}
-      >
-        📺 TV Display ↗
-      </Link>
+    <div className="fixed top-2 left-1/2 -translate-x-1/2 z-[100] flex gap-1 bg-black/80 backdrop-blur-md border border-white/10 rounded-full px-3 py-1.5 text-[10px] font-mono text-zinc-400 shadow-2xl">
+      <span className="text-zinc-600 mr-1">Sandbox:</span>
+      <Link href="/" className={`px-2 py-0.5 rounded-full ${pathname === '/' ? 'bg-white/10 text-white' : 'hover:text-white'}`}>📱 User App</Link>
+      <Link href="/dj" className={`px-2 py-0.5 rounded-full ${pathname === '/dj' ? 'bg-white/10 text-white' : 'hover:text-white'}`}>🎛️ DJ Console</Link>
+      <Link href="/tv" className={`px-2 py-0.5 rounded-full ${pathname === '/tv' ? 'bg-white/10 text-white' : 'hover:text-white'}`}>📺 TV Display</Link>
+      <Link href="/qrcode" className={`px-2 py-0.5 rounded-full ${pathname === '/qrcode' ? 'bg-white/10 text-white' : 'hover:text-white'}`}>↗ QR</Link>
     </div>
   );
 }

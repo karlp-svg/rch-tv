@@ -12,8 +12,9 @@ import { useEffect, useRef } from 'react';
  * backgrounded for a while and resumes full speed on return.
  *
  * Usage:
- *   useSmartPolling(fetchFn, 5000);  // replaces setInterval(fetchFn, 5000)
+ *   useSmartPolling(fetchFn, 5000); // replaces setInterval(fetchFn, 5000)
  */
+
 export function useSmartPolling(
   callback: () => void | Promise<void>,
   intervalMs: number,
@@ -56,12 +57,11 @@ export function useSmartPolling(
     startPolling();
 
     document.addEventListener('visibilitychange', onVisibilityChange);
-
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
       if (bgIntervalRef.current) clearInterval(bgIntervalRef.current);
       document.removeEventListener('visibilitychange', onVisibilityChange);
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [intervalMs, ...deps]);
 }

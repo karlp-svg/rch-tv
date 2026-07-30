@@ -1,26 +1,20 @@
-import type { Metadata, Viewport } from "next";
-import type { ReactNode } from "react";
+import type { Metadata } from "next";
 import "./globals.css";
-
-export const metadata: Metadata = {
-  title: "Jakarl DJ - Live TV Requests",
-  description: "Follow @jakarl_dj on Instagram and request TV shoutouts, songs, or fame moments.",
-};
-
-export const viewport: Viewport = {
-  width: "device-width",
-  initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
-  themeColor: "#0a0a0f",
-};
-
 import SandboxSwitcher from "@/components/SandboxSwitcher";
 
-export default function RootLayout({ children }: { children: ReactNode }) {
+export const metadata: Metadata = {
+  title: "RCH TV — Interactive DJ Experience",
+  description: "Send shoutouts, request songs, and get your photo on the big screen — powered by @jakarl_dj",
+};
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <html lang="en">
-      <body className="bg-zinc-950 text-white antialiased overscroll-none">
+      <body className="antialiased bg-zinc-950 text-white overflow-x-hidden">
         <SandboxSwitcher />
         {children}
       </body>

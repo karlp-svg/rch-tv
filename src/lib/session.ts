@@ -15,17 +15,14 @@ export function generateSessionToken() {
 }
 
 export async function getPublicSession(): Promise<string | null> {
-    const [row] = await db.select().from(appSettings).where(eq(appSettings.key, SESSION_KEY)).limit(1);
+  const [row] = await db.select().from(appSettings).where(eq(appSettings.key, SESSION_KEY)).limit(1);
   return row?.value ?? null;
 }
 
 export async function setPublicSession(token: string) {
-    await db.insert(appSettings)
+  await db.insert(appSettings)
     .values({ key: SESSION_KEY, value: token })
-    .onConflictDoUpdate({
-      target: appSettings.key,
-      set: { value: token },
-    });
+    .onConflictDoUpdate({ target: appSettings.key, set: { value: token } });
   return token;
 }
 

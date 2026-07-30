@@ -98,13 +98,13 @@ const SYSTEM_MSG = 'You are a witty short-form copywriter. Output the caption te
 
 // ─── Provider callers ───────────────────────────────────────────────
 
-// Gemini free-tier model fallback chain. Some accounts/regions have
-// gemini-2.0-flash rate-limited to 0 on the free tier, so we try
-// multiple models before giving up.
+// Gemini model fallback chain — kept current as of mid-2026.
+// gemini-1.5-flash and gemini-2.0-flash are deprecated (shut down April 2025).
+// gemini-2.5-flash-lite is the cheapest current model; gemini-2.5-flash is
+// the best price-performance option. Both work on the free tier.
 const GEMINI_MODELS = [
-  'gemini-2.0-flash-lite',
-  'gemini-1.5-flash',
-  'gemini-2.0-flash',
+  'gemini-2.5-flash',
+  'gemini-2.5-flash-lite',
 ];
 
 async function callGeminiModel(prompt: string, apiKey: string, model: string): Promise<string> {
@@ -128,18 +128,23 @@ async function callGemini(prompt: string, apiKey: string): Promise<string> {
   const explicit = process.env.GEMINI_MODEL;
   if (explicit) return callGeminiModel(prompt, apiKey, explicit);
 
-  // Otherwise try the free-tier-friendly models in order
+  // Otherwise try models in order, falling back on any retryable error
   let lastErr: Error | null = null;
   for (const model of GEMINI_MODELS) {
     try {
       return await callGeminiModel(prompt, apiKey, model);
     } catch (e: any) {
-      console.error(`Gemini model ${model} failed:`, e?.message?.slice(0, 200));
+      const msg: string = e?.message ?? '';
+      console.error(`Gemini model ${model} failed:`, msg.slice(0, 200));
       lastErr = e;
-      // If it's a 429 (rate limit / quota), try the next model
-      if (e?.message?.includes('429')) continue;
-      // For other errors (auth, bad request) don't bother trying more models
-      throw e;
+      // Always continue to the next model on:
+      //  - 404 (model not found / deprecated)
+      //  - 429 (rate-limited / quota exhausted)
+      //  - 503 (temporarily unavailable)
+      // Only stop on auth/permission errors (401, 403) — those
+      // will never succeed with a different model either.
+      if (/40[13]/.test(msg)) throw e;
+      continue;
     }
   }
   throw lastErr || new Error('All Gemini models exhausted');
