@@ -98,14 +98,26 @@ const SYSTEM_MSG = 'You are a witty short-form copywriter. Output the caption te
 
 // ─── Provider callers ───────────────────────────────────────────────
 
-// Gemini model fallback chain — kept current as of mid-2026.
-// gemini-1.5-flash and gemini-2.0-flash are deprecated (shut down April 2025).
-// gemini-2.5-flash-lite is the cheapest current model; gemini-2.5-flash is
-// the best price-performance option. Both work on the free tier.
-const GEMINI_MODELS = [
+// Gemini fallback chain.
+// Do NOT include gemini-1.5-* or gemini-2.0-* — they now return 404.
+// Also avoid gemini-2.5-flash-lite: Google now returns "no longer available to new users"
+// for some API keys. We dynamically ask ListModels below and prefer newer Flash models.
+const GEMINI_PREFERRED_MODELS = [
+  'gemini-3.1-flash-lite',
+  'gemini-3-flash-preview',
+  'gemini-flash-latest',
   'gemini-2.5-flash',
-  'gemini-2.5-flash-lite',
+  'gemini-2.5-pro',
 ];
+
+const GEMINI_BLOCKED_MODELS = new Set([
+  'gemini-1.5-flash',
+  'gemini-1.5-flash-latest',
+  'gemini-1.5-pro',
+  'gemini-2.0-flash',
+  'gemini-2.0-flash-lite',
+  'gemini-2.5-flash-lite',
+]);
 
 async function callGeminiModel(prompt: string, apiKey: string, model: string): Promise<string> {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
@@ -123,31 +135,81 @@ async function callGeminiModel(prompt: string, apiKey: string, model: string): P
   return text.replace(/^["'""'']+|["'""'']+$/g, '').trim();
 }
 
-async function callGemini(prompt: string, apiKey: string): Promise<string> {
-  // If user explicitly set a model, only try that one
-  const explicit = process.env.GEMINI_MODEL;
-  if (explicit) return callGeminiModel(prompt, apiKey, explicit);
+type GeminiListedModel = {
+  name?: string;
+  supportedGenerationMethods?: string[];
+};
 
-  // Otherwise try models in order, falling back on any retryable error
+function normalizeGeminiModelName(name: string) {
+  return name.replace(/^models\//, '').trim();
+}
+
+function isUsefulTextGeminiModel(model: string) {
+  const m = normalizeGeminiModelName(model);
+  if (!m || GEMINI_BLOCKED_MODELS.has(m)) return false;
+  // Exclude non-text-generation families. The caption route only needs text.
+  if (/(embedding|imagen|image|veo|tts|audio|live)/i.test(m)) return false;
+  return true;
+}
+
+function rankGeminiModel(model: string) {
+  const m = normalizeGeminiModelName(model);
+  const preferredIndex = GEMINI_PREFERRED_MODELS.indexOf(m);
+  if (preferredIndex !== -1) return preferredIndex;
+  if (/flash-lite/i.test(m)) return 50;
+  if (/flash/i.test(m)) return 60;
+  if (/pro/i.test(m)) return 80;
+  return 100;
+}
+
+async function listAvailableGeminiModels(apiKey: string): Promise<string[]> {
+  try {
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`, {
+      method: 'GET',
+      cache: 'no-store',
+    });
+    if (!res.ok) {
+      console.error(`Gemini ListModels ${res.status}:`, (await res.text()).slice(0, 300));
+      return [];
+    }
+    const data = await res.json();
+    const models = Array.isArray(data?.models) ? data.models as GeminiListedModel[] : [];
+    return models
+      .filter((m) => m.supportedGenerationMethods?.includes('generateContent'))
+      .map((m) => normalizeGeminiModelName(m.name || ''))
+      .filter(isUsefulTextGeminiModel)
+      .sort((a, b) => rankGeminiModel(a) - rankGeminiModel(b));
+  } catch (e: any) {
+    console.error('Gemini ListModels failed:', e?.message || e);
+    return [];
+  }
+}
+
+async function callGemini(prompt: string, apiKey: string): Promise<string> {
+  // If user explicitly set a model, only try that one.
+  // This lets you override quickly in Vercel with GEMINI_MODEL.
+  const explicit = process.env.GEMINI_MODEL;
+  if (explicit) return callGeminiModel(prompt, apiKey, normalizeGeminiModelName(explicit));
+
+  const discovered = await listAvailableGeminiModels(apiKey);
+  const candidates = discovered.length > 0
+    ? discovered
+    : Array.from(new Set(GEMINI_PREFERRED_MODELS.map(normalizeGeminiModelName).filter(isUsefulTextGeminiModel)));
+
   let lastErr: Error | null = null;
-  for (const model of GEMINI_MODELS) {
+  for (const model of candidates) {
     try {
       return await callGeminiModel(prompt, apiKey, model);
     } catch (e: any) {
       const msg: string = e?.message ?? '';
-      console.error(`Gemini model ${model} failed:`, msg.slice(0, 200));
+      console.error(`Gemini model ${model} failed:`, msg.slice(0, 300));
       lastErr = e;
-      // Always continue to the next model on:
-      //  - 404 (model not found / deprecated)
-      //  - 429 (rate-limited / quota exhausted)
-      //  - 503 (temporarily unavailable)
-      // Only stop on auth/permission errors (401, 403) — those
-      // will never succeed with a different model either.
-      if (/40[13]/.test(msg)) throw e;
-      continue;
+      // Only stop on auth/permission errors. Model availability, quota, and temporary
+      // platform failures should fall through to the next candidate.
+      if (/\b40[13]\b/.test(msg)) throw e;
     }
   }
-  throw lastErr || new Error('All Gemini models exhausted');
+  throw lastErr || new Error('No usable Gemini generateContent model found for this API key');
 }
 
 async function callGroq(prompt: string, apiKey: string): Promise<string> {
