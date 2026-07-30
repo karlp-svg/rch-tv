@@ -585,8 +585,9 @@ function FameView({ item, completedFame, fameSettings, hideBackground }: { item:
                 (e.currentTarget as HTMLImageElement).src = `${IMAGE_PROXY_BASE}${item.id}`;
               }}
             />
-            {/* Polaroid "developing" overlay — starts slate-blue #8499a0, fades out over 8s */}
+            {/* Polaroid "developing" overlay — starts slate-blue #8499a0, fades out over 8s. Keyed by item id so every new photo restarts the animation. */}
             <div
+              key={item.id}
               className="absolute inset-0 pointer-events-none rounded-md"
               style={{ background: '#8499a0', animation: 'polaroid-develop 8s ease-out forwards' }}
             />

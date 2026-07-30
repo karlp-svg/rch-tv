@@ -59,7 +59,8 @@ export function middleware(req: NextRequest) {
   if (
     pathname.startsWith('/api/admin') ||
     pathname.startsWith('/api/settings') ||
-    pathname.startsWith('/api/social-posts')
+    pathname.startsWith('/api/social-posts') ||
+    pathname.startsWith('/api/ai-caption')
   ) {
     const djPass = process.env.DJ_CONSOLE_PASSWORD;
     if (djPass && djPass.length > 0) {

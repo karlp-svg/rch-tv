@@ -553,11 +553,12 @@ export default function DJAdminPage() {
     
     if (filter === 'active') {
       items = items.filter(i => i.status === 'verifying' || i.status === 'queued' || i.status === 'in_progress');
-    } else if (filter !== 'all' && tab !== 'all') {
-      items = items.filter(i => i.status === filter);
-    } else if (filter !== 'all' && tab === 'all') {
+    } else if (filter !== 'all') {
       items = items.filter(i => i.status === filter);
     }
+
+    // Always sort: oldest at top → newest at bottom (all views, but especially All Requests)
+    items = [...items].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
     return items;
   };
 

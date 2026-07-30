@@ -661,6 +661,8 @@ export default function EndOfNightModal({ open, onClose }: { open: boolean; onCl
   const [generating, setGenerating] = useState(false);
   const [posts, setPosts] = useState<SocialPost[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
 
   useEffect(() => {
     if (open) {
@@ -715,6 +717,33 @@ export default function EndOfNightModal({ open, onClose }: { open: boolean; onCl
     if (candidates.length === 0) candidates = pool;
     const pick = candidates[Math.floor(Math.random() * candidates.length)];
     setTagline(pick);
+  };
+
+  const generateAiCaption = async () => {
+    setAiLoading(true);
+    setAiError(null);
+    try {
+      const shoutIds = postType === 'shoutouts' && selected.size > 0 ? Array.from(selected) : undefined;
+      const songIds = postType === 'songs' && selected.size > 0 ? Array.from(selected) : undefined;
+      const photoIds = postType === 'photos' && selected.size > 0 ? Array.from(selected) : undefined;
+      const res = await fetch('/api/ai-caption', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...getDJAuth() },
+        body: JSON.stringify({ postType, shoutIds, songIds, photoIds }),
+      });
+      const data = await res.json().catch(() => ({} as any));
+      if (!res.ok) {
+        setAiError(data?.error || `AI request failed (${res.status})`);
+      } else if (!data?.caption) {
+        setAiError(data?.error || 'No AI provider configured. Set OPENAI_API_KEY or ANTHROPIC_API_KEY on the server.');
+      } else {
+        setTagline(String(data.caption));
+      }
+    } catch (e: any) {
+      setAiError(e?.message || 'AI request failed');
+    } finally {
+      setAiLoading(false);
+    }
   };
 
   const toggleItem = (id: number) => {
@@ -918,11 +947,23 @@ export default function EndOfNightModal({ open, onClose }: { open: boolean; onCl
             </div>
 
             <div className="mb-4">
-              <div className="flex items-center justify-between mb-1">
+              <div className="flex items-center justify-between mb-1 gap-2 flex-wrap">
                 <label className="text-[10px] text-zinc-400 uppercase font-mono">Bottom Tagline</label>
-                <button onClick={generateRandomTagline} className="flex items-center gap-1 text-[10px] bg-indigo-500/15 hover:bg-indigo-500/25 border border-indigo-500/30 text-indigo-300 px-2.5 py-1 rounded-full transition">
-                  <Sparkles className="w-3 h-3" /> New Tagline
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={generateAiCaption}
+                    disabled={aiLoading}
+                    title="Reads tonight's shoutouts, songs and photo captions and writes a catchy tie-in"
+                    className="flex items-center gap-1 text-[10px] bg-fuchsia-500/15 hover:bg-fuchsia-500/25 border border-fuchsia-500/30 text-fuchsia-300 px-2.5 py-1 rounded-full transition disabled:opacity-50"
+                  >
+                    {aiLoading
+                      ? <><Loader2 className="w-3 h-3 animate-spin" /> AI…</>
+                      : <><Sparkles className="w-3 h-3" /> AI Caption</>}
+                  </button>
+                  <button onClick={generateRandomTagline} className="flex items-center gap-1 text-[10px] bg-indigo-500/15 hover:bg-indigo-500/25 border border-indigo-500/30 text-indigo-300 px-2.5 py-1 rounded-full transition">
+                    <Sparkles className="w-3 h-3" /> New Tagline
+                  </button>
+                </div>
               </div>
               <input
                 type="text"
@@ -931,6 +972,9 @@ export default function EndOfNightModal({ open, onClose }: { open: boolean; onCl
                 className="w-full bg-black border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder:text-zinc-600"
                 maxLength={90}
               />
+              {aiError && (
+                <div className="mt-1 text-[10px] text-fuchsia-300/90">{aiError}</div>
+              )}
             </div>
 
             {error && <div className="p-3 rounded-xl text-xs mb-3 bg-red-500/10 text-red-300 border border-red-500/20">{error}</div>}
