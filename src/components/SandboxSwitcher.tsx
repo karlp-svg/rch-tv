@@ -25,7 +25,7 @@ export default function SandboxSwitcher() {
       <Link href="/" className={`px-2 py-0.5 rounded-full ${pathname === '/' ? 'bg-white/10 text-white' : 'hover:text-white'}`}>📱 User App</Link>
       <Link href="/dj" className={`px-2 py-0.5 rounded-full ${pathname === '/dj' ? 'bg-white/10 text-white' : 'hover:text-white'}`}>🎛️ DJ Console</Link>
       <Link href="/tv" className={`px-2 py-0.5 rounded-full ${pathname === '/tv' ? 'bg-white/10 text-white' : 'hover:text-white'}`}>📺 TV Display</Link>
-      <Link href="/qrcode" className={`px-2 py-0.5 rounded-full ${pathname === '/qrcode' ? 'bg-white/10 text-white' : 'hover:text-white'}`}>↗ QR</Link>
+      <Link href="/qrcodeonly" className={`px-2 py-0.5 rounded-full ${pathname === '/qrcodeonly' ? 'bg-white/10 text-white' : 'hover:text-white'}`}>↗ QR</Link>
     </div>
   );
 }

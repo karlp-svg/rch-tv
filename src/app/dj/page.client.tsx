@@ -122,6 +122,7 @@ export default function DJAdminPage() {
   const [songRotation, setSongRotation] = useState(5);
   const [tvWobbleSeconds, setTvWobbleSeconds] = useState(0);
   const [thankYouTwitchEnabled, setThankYouTwitchEnabled] = useState(false);
+  const [thankYouTipEnabled, setThankYouTipEnabled] = useState(false);
   const [showEndOfNight, setShowEndOfNight] = useState(false);
   const [showOptions, setShowOptions] = useState(false);
   // Manual entry modals
@@ -262,6 +263,7 @@ export default function DJAdminPage() {
         if (s.song_rotation !== undefined) setSongRotation(parseInt(s.song_rotation, 10));
         if (s.tv_card_wobble_seconds !== undefined) setTvWobbleSeconds(parseInt(s.tv_card_wobble_seconds, 10) || 0);
         if (s.thank_you_twitch_enabled !== undefined) setThankYouTwitchEnabled(s.thank_you_twitch_enabled === 'true');
+        if (s.thank_you_tip_enabled !== undefined) setThankYouTipEnabled(s.thank_you_tip_enabled === 'true');
         if (s.tv_hide_background !== undefined) setHideBackground(s.tv_hide_background === 'true');
         if (s.tv_hide_idle_screen !== undefined) setHideIdleScreen(s.tv_hide_idle_screen === 'true');
         if (s.tv_hide_idle_qr !== undefined) setHideIdleQr(s.tv_hide_idle_qr === 'true');
@@ -913,6 +915,24 @@ export default function DJAdminPage() {
                             aria-label="Toggle Twitch stream on thank-you pages"
                           >
                             <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-transform ${thankYouTwitchEnabled ? 'translate-x-[18px]' : 'translate-x-0.5'}`} />
+                          </button>
+                        </div>
+                        <div className="flex items-center justify-between gap-3">
+                          <span className="text-[10px] text-zinc-400">Show Buy the DJ a drink</span>
+                          <button
+                            onClick={async () => {
+                              const next = !thankYouTipEnabled;
+                              setThankYouTipEnabled(next);
+                              await djFetch('/api/settings', {
+                                method: 'PUT',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ thank_you_tip_enabled: String(next) }),
+                              });
+                            }}
+                            className={`relative w-9 h-5 rounded-full transition-colors ${thankYouTipEnabled ? 'bg-amber-500' : 'bg-zinc-700'}`}
+                            aria-label="Toggle Buy the DJ a drink button on thank-you pages"
+                          >
+                            <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-transform ${thankYouTipEnabled ? 'translate-x-[18px]' : 'translate-x-0.5'}`} />
                           </button>
                         </div>
                       </div>

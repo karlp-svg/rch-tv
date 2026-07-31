@@ -225,6 +225,7 @@ export default function MakeFamousPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [showThankYouTwitch, setShowThankYouTwitch] = useState(false);
+  const [showTipButton, setShowTipButton] = useState(false);
   const [fullscreenImage, setFullscreenImage] = useState<string | null>(null);
 
   const [cameraOn, setCameraOn] = useState(false);
@@ -247,7 +248,10 @@ export default function MakeFamousPage() {
   useEffect(() => {
     fetch('/api/settings', { cache: 'no-store' })
       .then(res => res.ok ? res.json() : null)
-      .then(settings => setShowThankYouTwitch(settings?.thank_you_twitch_enabled === 'true'))
+      .then(settings => {
+        setShowThankYouTwitch(settings?.thank_you_twitch_enabled === 'true');
+        setShowTipButton(settings?.thank_you_tip_enabled === 'true');
+      })
       .catch(() => {});
   }, []);
 
@@ -666,6 +670,17 @@ export default function MakeFamousPage() {
                   <div className="text-[10px] uppercase tracking-widest text-pink-300 mb-2">Live from @jakarl_dj</div>
                   <TwitchThankYouPlayer />
                 </div>
+              )}
+              {showTipButton && (
+                <a
+                  href="https://buy.stripe.com/4gM7sE5NGfti1Ec3PY5sA00"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full mb-3 py-3 bg-gradient-to-r from-yellow-500 to-amber-500 hover:brightness-110 text-black font-semibold rounded-2xl text-sm flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
+                >
+                  <span className="text-lg">🍻</span>
+                  Buy the DJ a drink
+                </a>
               )}
               <button
                 onClick={() => { window.location.href = '/dashboard'; }}

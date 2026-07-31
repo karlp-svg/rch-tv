@@ -62,6 +62,7 @@ export default function SongRequestPage() {
   const [submitted, setSubmitted] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [showThankYouTwitch, setShowThankYouTwitch] = useState(false);
+  const [showTipButton, setShowTipButton] = useState(false);
   const artistPlaceholder = useRotatingPlaceholder(ARTIST_SAMPLES, artist);
   const titlePlaceholder = useRotatingPlaceholder(TITLE_SAMPLES, title);
   const namePlaceholder = useRotatingPlaceholder(NAME_SAMPLES, requesterName);
@@ -77,7 +78,10 @@ export default function SongRequestPage() {
   useEffect(() => {
     fetch('/api/settings', { cache: 'no-store' })
       .then(res => res.ok ? res.json() : null)
-      .then(settings => setShowThankYouTwitch(settings?.thank_you_twitch_enabled === 'true'))
+      .then(settings => {
+        setShowThankYouTwitch(settings?.thank_you_twitch_enabled === 'true');
+        setShowTipButton(settings?.thank_you_tip_enabled === 'true');
+      })
       .catch(() => {});
   }, []);
 
@@ -328,6 +332,18 @@ export default function SongRequestPage() {
                 <div className="text-[10px] uppercase tracking-widest text-amber-300 mb-2">Live from @jakarl_dj</div>
                 <TwitchThankYouPlayer />
               </div>
+            )}
+
+            {showTipButton && (
+              <a
+                href="https://buy.stripe.com/4gM7sE5NGfti1Ec3PY5sA00"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full mb-3 py-3 bg-gradient-to-r from-yellow-500 to-amber-500 hover:brightness-110 text-black font-semibold rounded-2xl text-sm flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
+              >
+                <span className="text-lg">🍻</span>
+                Buy the DJ a drink
+              </a>
             )}
 
             <button

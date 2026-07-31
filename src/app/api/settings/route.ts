@@ -19,6 +19,7 @@ const DEFAULTS: Record<string, string> = {
   song_rotation: '5',
   tv_card_wobble_seconds: '0',
   thank_you_twitch_enabled: 'false',
+  thank_you_tip_enabled: 'false',
   tv_hide_background: 'false',
   tv_hide_idle_screen: 'false',
   tv_hide_idle_qr: 'false',
