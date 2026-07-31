@@ -22,6 +22,8 @@ type FameSettings = {
   exposureSeconds: number;
 };
 
+const TV_HEADER_CARD = 'bg-black border-2 border-white rounded-2xl shadow-2xl';
+
 const DEFAULT_FAME_SETTINGS: FameSettings = {
   photoSize: 42,
   completedScale: 70,
@@ -42,10 +44,12 @@ export default function TVPage() {
   const [fameSettings, setFameSettings] = useState<FameSettings>(DEFAULT_FAME_SETTINGS);
   const [hideBackground, setHideBackground] = useState<boolean>(false);
   const [hideIdleScreen, setHideIdleScreen] = useState<boolean>(false);
+  const [hideIdleQr, setHideIdleQr] = useState<boolean>(false);
   const [shoutoutRotationState, setShoutoutRotationState] = useState<number>(5);
   const [songRotationState, setSongRotationState] = useState<number>(5);
   const [wobbleSeconds, setWobbleSeconds] = useState<number>(0);
   const [wobbling, setWobbling] = useState(false);
+  const [headerTop, setHeaderTop] = useState<boolean>(false);
   const [publicQr, setPublicQr] = useState<string>('');
   const [publicSession, setPublicSession] = useState<string>('');
 
@@ -91,6 +95,8 @@ export default function TVPage() {
               if (s.shoutout_rotation !== undefined) setShoutoutRotationState(parseInt(s.shoutout_rotation, 10));
               if (s.song_rotation !== undefined) setSongRotationState(parseInt(s.song_rotation, 10));
               if (s.tv_card_wobble_seconds !== undefined) setWobbleSeconds(parseInt(s.tv_card_wobble_seconds, 10) || 0);
+              if (s.tv_header_position !== undefined) setHeaderTop(s.tv_header_position === 'top');
+              if (s.tv_hide_idle_qr !== undefined) setHideIdleQr(s.tv_hide_idle_qr === 'true');
             }
           })
           .catch(() => {});
@@ -165,9 +171,9 @@ export default function TVPage() {
       return <main className="w-screen h-screen bg-transparent"></main>;
     }
     return (
-      <main className={`w-screen h-screen ${hideBackground ? 'bg-transparent' : 'bg-black'} flex flex-col items-center justify-center p-8`}>
-        {/* RCH TV title on a tight solid grey deck card */}
-        <div className="bg-zinc-800 border border-white/10 rounded-2xl px-6 py-3 mb-6 shadow-2xl">
+      <main className={`relative w-screen h-screen ${hideBackground ? 'bg-transparent' : 'bg-black'} flex flex-col items-center justify-center p-8`}>
+        {/* RCH TV title card */}
+        <div className={`${TV_HEADER_CARD} px-6 py-3 ${headerTop ? 'absolute top-6 left-1/2 -translate-x-1/2 z-40' : 'mb-6'}`}>
           <div
             className="text-6xl sm:text-7xl font-normal tracking-[0.08em] text-transparent bg-clip-text bg-gradient-to-br from-purple-400 via-pink-400 to-purple-600 whitespace-pre text-center"
             style={{ fontFamily: "'Vortax', 'Orbitron', 'Audiowide', system-ui, sans-serif" }}
@@ -178,17 +184,19 @@ export default function TVPage() {
             className="text-center text-white/70 mt-2 tracking-[0.32em] uppercase"
             style={{ fontFamily: "'Orbitron', 'Audiowide', sans-serif", fontSize: 'clamp(0.65rem, 1vw, 0.95rem)', fontWeight: 300 }}
           >
-            WAITING ON REQUESTS · SCAN QR CODE
+            WAITING ON REQUESTS{hideIdleQr ? '' : ' · SCAN QR CODE'}
           </div>
         </div>
-        {publicQr ? (
-          <div className="bg-zinc-800 border border-white/10 rounded-2xl p-3 shadow-2xl flex items-center justify-center">
-            <img src={publicQr} alt="Scan to join" className="w-56 h-56 sm:w-72 sm:h-72 object-contain" />
-          </div>
-        ) : (
-          <div className="bg-zinc-800 border border-white/10 rounded-2xl p-3 shadow-2xl w-56 h-56 sm:w-72 sm:h-72 grid place-items-center text-zinc-500">
-            Loading QR...
-          </div>
+        {!hideIdleQr && (
+          publicQr ? (
+            <div className={`${TV_HEADER_CARD} p-3 flex items-center justify-center`}>
+              <img src={publicQr} alt="Scan to join" className="w-56 h-56 sm:w-72 sm:h-72 object-contain" />
+            </div>
+          ) : (
+            <div className={`${TV_HEADER_CARD} p-3 w-56 h-56 sm:w-72 sm:h-72 grid place-items-center text-zinc-500`}>
+              Loading QR...
+            </div>
+          )
         )}
       </main>
     );
@@ -201,9 +209,9 @@ export default function TVPage() {
           fading ? 'opacity-0' : 'opacity-100'
         }`}
       >
-        {currentItem.type === 'shoutout' && <ShoutoutView item={currentItem} hideBackground={hideBackground} rotationRange={shoutoutRotationState} wobbling={wobbling} />}
-        {currentItem.type === 'song' && <SongView item={currentItem} hideBackground={hideBackground} rotationRange={songRotationState} wobbling={wobbling} />}
-        {currentItem.type === 'fame' && <FameView item={currentItem} completedFame={completedFame} fameSettings={fameSettings} hideBackground={hideBackground} />}
+        {currentItem.type === 'shoutout' && <ShoutoutView item={currentItem} hideBackground={hideBackground} rotationRange={shoutoutRotationState} wobbling={wobbling} headerTop={headerTop} />}
+        {currentItem.type === 'song' && <SongView item={currentItem} hideBackground={hideBackground} rotationRange={songRotationState} wobbling={wobbling} headerTop={headerTop} />}
+        {currentItem.type === 'fame' && <FameView item={currentItem} completedFame={completedFame} fameSettings={fameSettings} hideBackground={hideBackground} headerTop={headerTop} />}
       </div>
     </main>
   );
@@ -254,7 +262,7 @@ function HandleSticker({
   );
 }
 
-function ShoutoutView({ item, hideBackground, rotationRange, wobbling }: { item: Extract<TVItem, { type: 'shoutout' }>; hideBackground?: boolean; rotationRange: number; wobbling: boolean }) {
+function ShoutoutView({ item, hideBackground, rotationRange, wobbling, headerTop }: { item: Extract<TVItem, { type: 'shoutout' }>; hideBackground?: boolean; rotationRange: number; wobbling: boolean; headerTop?: boolean }) {
   // Deterministic but varied angle, distributed inside the DJ-selected ± range.
   const seeded = ((item.id * 97) % 1000) / 999;
   const rotDeg = (seeded * 2 - 1) * Math.max(0, rotationRange);
@@ -262,11 +270,11 @@ function ShoutoutView({ item, hideBackground, rotationRange, wobbling }: { item:
 
   return (
     <div
-      className={`w-full h-full ${hideBackground ? 'bg-transparent' : ''} flex flex-col items-center justify-center p-8`}
+      className={`relative w-full h-full ${hideBackground ? 'bg-transparent' : ''} flex flex-col items-center ${headerTop ? 'justify-center pt-28' : 'justify-center'} p-8`}
       style={hideBackground ? undefined : { background: 'linear-gradient(135deg, #2a0845 0%, #000000 50%, #1a1a2e 100%)' }}
     >
-      {/* RCH TV header on solid grey deck card */}
-      <div className="bg-zinc-800 border border-white/10 rounded-2xl px-8 py-3 mb-14 shadow-2xl">
+      {/* RCH TV header card */}
+      <div className={`${TV_HEADER_CARD} px-8 py-3 ${headerTop ? 'absolute top-6 left-1/2 -translate-x-1/2 z-40' : 'mb-14'}`}>
         <div
           className="text-4xl sm:text-5xl uppercase tracking-[0.08em] font-normal whitespace-pre text-center"
           style={{ fontFamily: "'Vortax', system-ui, sans-serif", color: '#c084fc' }}
@@ -330,7 +338,7 @@ function ShoutoutView({ item, hideBackground, rotationRange, wobbling }: { item:
 // Accent palette used by the End of Night songs post
 const SONG_ACCENTS = ['#1DB954', '#FF4A00', '#F7E600', '#A259FF', '#00C8F0', '#FF69B4'];
 
-function SongView({ item, hideBackground, rotationRange, wobbling }: { item: Extract<TVItem, { type: 'song' }>; hideBackground?: boolean; rotationRange: number; wobbling: boolean }) {
+function SongView({ item, hideBackground, rotationRange, wobbling, headerTop }: { item: Extract<TVItem, { type: 'song' }>; hideBackground?: boolean; rotationRange: number; wobbling: boolean; headerTop?: boolean }) {
   const accent = SONG_ACCENTS[item.id % SONG_ACCENTS.length];
   // Deterministic but varied angle, distributed inside the DJ-selected ± range.
   const seeded = ((item.id * 193) % 1000) / 999;
@@ -340,15 +348,15 @@ function SongView({ item, hideBackground, rotationRange, wobbling }: { item: Ext
 
   return (
     <div
-      className={`w-full h-full ${hideBackground ? 'bg-transparent' : ''} flex flex-col items-center justify-center p-8`}
+      className={`relative w-full h-full ${hideBackground ? 'bg-transparent' : ''} flex flex-col items-center ${headerTop ? 'justify-center pt-28' : 'justify-center'} p-8`}
       style={
         hideBackground
           ? undefined
           : { background: 'linear-gradient(135deg, #1a1a2e 0%, #0f0f23 30%, #16213e 60%, #0a0a0a 100%)' }
       }
     >
-      {/* RCH TV header on solid grey deck card — title matches deck highlight accent */}
-      <div className="bg-zinc-800 border border-white/10 rounded-2xl px-8 py-3 mb-14 shadow-2xl">
+      {/* RCH TV header card — title matches deck highlight accent */}
+      <div className={`${TV_HEADER_CARD} px-8 py-3 ${headerTop ? 'absolute top-6 left-1/2 -translate-x-1/2 z-40' : 'mb-14'}`}>
         <div
           className="text-4xl sm:text-5xl uppercase tracking-[0.08em] font-normal whitespace-pre text-center"
           style={{ fontFamily: "'Vortax', system-ui, sans-serif", color: accent }}
@@ -460,7 +468,7 @@ function SongView({ item, hideBackground, rotationRange, wobbling }: { item: Ext
   );
 }
 
-function FameView({ item, completedFame, fameSettings, hideBackground }: { item: Extract<TVItem, { type: 'fame' }>; completedFame: Array<{ id: number; polaroidSrc: string | null; imageSrc: string | null; createdAt: string }>; fameSettings: FameSettings; hideBackground?: boolean }) {
+function FameView({ item, completedFame, fameSettings, hideBackground, headerTop }: { item: Extract<TVItem, { type: 'fame' }>; completedFame: Array<{ id: number; polaroidSrc: string | null; imageSrc: string | null; createdAt: string }>; fameSettings: FameSettings; hideBackground?: boolean; headerTop?: boolean }) {
   const imgSrc = item.polaroidSrc || `${IMAGE_PROXY_BASE}${item.id}?v=polaroid`;
   const photoSize = fameSettings.photoSize;
   const completedScale = fameSettings.completedScale / 100;
@@ -551,9 +559,9 @@ function FameView({ item, completedFame, fameSettings, hideBackground }: { item:
 
         <div
           className="absolute inset-x-0 z-30 text-center pointer-events-none"
-          style={{ top: `${fameSettings.titleOffset}%` }}
+          style={{ top: headerTop ? '1.5rem' : `${fameSettings.titleOffset}%` }}
         >
-          <div className="inline-block bg-zinc-800 border border-white/10 rounded-2xl px-8 py-4 shadow-2xl">
+          <div className={`inline-block ${TV_HEADER_CARD} px-8 py-4`}>
             <div
               className="text-4xl sm:text-5xl uppercase tracking-[0.08em] text-pink-400 font-normal whitespace-pre mb-1 drop-shadow-[0_4px_10px_rgba(0,0,0,0.8)]"
               style={{ fontFamily: "'Vortax', system-ui, sans-serif" }}

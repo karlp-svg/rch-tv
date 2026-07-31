@@ -21,7 +21,9 @@ const DEFAULTS: Record<string, string> = {
   thank_you_twitch_enabled: 'false',
   tv_hide_background: 'false',
   tv_hide_idle_screen: 'false',
+  tv_hide_idle_qr: 'false',
   fame_exposure_seconds: '8',
+  tv_header_position: 'center',
 };
 
 export async function GET() {

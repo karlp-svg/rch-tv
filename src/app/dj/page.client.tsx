@@ -106,6 +106,8 @@ export default function DJAdminPage() {
   const [tvQueueLength, setTvQueueLength] = useState<number>(0);
   const [hideBackground, setHideBackground] = useState<boolean>(false);
   const [hideIdleScreen, setHideIdleScreen] = useState<boolean>(false);
+  const [hideIdleQr, setHideIdleQr] = useState<boolean>(false);
+  const [headerPositionTop, setHeaderPositionTop] = useState<boolean>(false);
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [famePhotoSize, setFamePhotoSize] = useState(42);
   const [fameCompletedScale, setFameCompletedScale] = useState(70);
@@ -262,6 +264,8 @@ export default function DJAdminPage() {
         if (s.thank_you_twitch_enabled !== undefined) setThankYouTwitchEnabled(s.thank_you_twitch_enabled === 'true');
         if (s.tv_hide_background !== undefined) setHideBackground(s.tv_hide_background === 'true');
         if (s.tv_hide_idle_screen !== undefined) setHideIdleScreen(s.tv_hide_idle_screen === 'true');
+        if (s.tv_hide_idle_qr !== undefined) setHideIdleQr(s.tv_hide_idle_qr === 'true');
+        if (s.tv_header_position !== undefined) setHeaderPositionTop(s.tv_header_position === 'top');
       }
     } catch (_) {}
   };
@@ -834,6 +838,40 @@ export default function DJAdminPage() {
                             className={`relative w-9 h-5 rounded-full transition-colors ${hideIdleScreen ? 'bg-purple-500' : 'bg-zinc-700'}`}
                           >
                             <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-transform ${hideIdleScreen ? 'translate-x-[18px]' : 'translate-x-0.5'}`} />
+                          </button>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] text-zinc-400">Hide Idle QR Code</span>
+                          <button
+                            onClick={async () => {
+                              const next = !hideIdleQr;
+                              setHideIdleQr(next);
+                              await djFetch('/api/settings', {
+                                method: 'PUT',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ tv_hide_idle_qr: String(next) }),
+                              });
+                            }}
+                            className={`relative w-9 h-5 rounded-full transition-colors ${hideIdleQr ? 'bg-purple-500' : 'bg-zinc-700'}`}
+                          >
+                            <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-transform ${hideIdleQr ? 'translate-x-[18px]' : 'translate-x-0.5'}`} />
+                          </button>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] text-zinc-400">Header at Top</span>
+                          <button
+                            onClick={async () => {
+                              const next = !headerPositionTop;
+                              setHeaderPositionTop(next);
+                              await djFetch('/api/settings', {
+                                method: 'PUT',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ tv_header_position: next ? 'top' : 'center' }),
+                              });
+                            }}
+                            className={`relative w-9 h-5 rounded-full transition-colors ${headerPositionTop ? 'bg-purple-500' : 'bg-zinc-700'}`}
+                          >
+                            <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-transform ${headerPositionTop ? 'translate-x-[18px]' : 'translate-x-0.5'}`} />
                           </button>
                         </div>
                         <div className="pt-1 border-t border-white/5">

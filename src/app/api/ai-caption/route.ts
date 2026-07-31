@@ -328,6 +328,15 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'invalid postType' }, { status: 400 });
     }
 
+    // Skip LLM calls in sandbox/dev/preview — saves API credits and avoids
+    // confusing errors when no provider key is set.
+    if (process.env.NEXT_PUBLIC_PRODUCTION_MODE !== 'true') {
+      return NextResponse.json({
+        caption: '[AI caption will generate on your production deploy]',
+        provider: 'skipped (non-production)',
+      });
+    }
+
     const chain = getProviderChain();
     if (chain.length === 0) {
       return NextResponse.json({
