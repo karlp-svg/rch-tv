@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { ArrowLeft, Send, Camera, CheckCircle2, Clock, Loader2, XCircle, ChevronDown, AtSign, RefreshCw, SwitchCamera, X } from 'lucide-react';
+import { ArrowLeft, Send, Camera, CheckCircle2, Clock, Loader2, XCircle, ChevronDown, AtSign, RefreshCw, SwitchCamera, X, Zap, ZapOff } from 'lucide-react';
 import Link from 'next/link';
 import { getStoredPublicSession, useRequireValidSession } from '@/lib/useSessionGuard';
 import TwitchThankYouPlayer from '@/components/TwitchThankYouPlayer';
@@ -232,6 +232,8 @@ export default function MakeFamousPage() {
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user');
   const [cameraStarting, setCameraStarting] = useState(false);
+  const [torchOn, setTorchOn] = useState(false);
+  const [torchSupported, setTorchSupported] = useState(false);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -286,6 +288,28 @@ export default function MakeFamousPage() {
     }
     if (videoRef.current) videoRef.current.srcObject = null;
     setCameraOn(false);
+    setTorchOn(false);
+    setTorchSupported(false);
+  };
+
+  const toggleTorch = async () => {
+    if (!streamRef.current) return;
+    const track = streamRef.current.getVideoTracks()[0];
+    if (!track) return;
+    try {
+      const next = !torchOn;
+      // `torch` is not in the TS DOM types but is widely supported on
+      // Android Chrome, iOS Safari 17+, and most mobile browsers via
+      // the ImageCapture / MediaStream constraints extension.
+      await track.applyConstraints({
+        advanced: [{ torch: next } as unknown as MediaTrackConstraints['advanced']],
+      } as MediaTrackConstraints);
+      setTorchOn(next);
+    } catch {
+      // If the device silently fails (e.g. hardware doesn't support it)
+      // hide the button entirely so the user isn't confused.
+      setTorchSupported(false);
+    }
   };
 
   const startCamera = useCallback(async (mode: 'user' | 'environment' = facingMode) => {
@@ -306,6 +330,30 @@ export default function MakeFamousPage() {
       streamRef.current = stream;
       setFacingMode(mode);
       setCameraOn(true);
+      setTorchOn(false);
+      // Check if the video track supports the torch capability.
+      // Some browsers expose it in getCapabilities(), others just let you
+      // try applyConstraints and fail silently — we do both.
+      try {
+        const track = stream.getVideoTracks()[0];
+        if (track) {
+          const caps = (track as any).getCapabilities?.();
+          if (caps && 'torch' in caps) {
+            setTorchSupported(caps.torch === true || (Array.isArray(caps.torch) && caps.torch.includes(true)));
+          } else {
+            // Even if getCapabilities doesn't exist (old iOS etc.) try a
+            // zero-cost applyConstraints probe — if it succeeds the device
+            // supports torch.
+            try {
+              await track.applyConstraints({
+                advanced: [{ torch: false } as unknown as MediaTrackConstraintSet],
+              } as MediaTrackConstraints);
+              setTorchSupported(true);
+            } catch { setTorchSupported(false); }
+          }
+        }
+      } catch { setTorchSupported(false); }
+
       requestAnimationFrame(() => {
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
@@ -327,7 +375,11 @@ export default function MakeFamousPage() {
     }
   }, [facingMode]);
 
-  const flipCamera = () => startCamera(facingMode === 'user' ? 'environment' : 'user');
+  const flipCamera = () => {
+    setTorchOn(false);
+    setTorchSupported(false);
+    startCamera(facingMode === 'user' ? 'environment' : 'user');
+  };
 
   // Fallback for environments where getUserMedia is blocked (e.g. embedded
   // iframes without camera permission). Uses the native file/camera picker and
@@ -489,9 +541,18 @@ export default function MakeFamousPage() {
                     <button type="button" onClick={stopCamera}
                       className="absolute top-2 left-2 bg-black/70 backdrop-blur-sm text-white p-2 rounded-full hover:bg-black/90"
                       title="Close camera"><X className="w-3.5 h-3.5" /></button>
-                    <button type="button" onClick={flipCamera}
-                      className="absolute top-2 right-2 bg-black/70 backdrop-blur-sm text-white p-2 rounded-full hover:bg-black/90"
-                      title="Flip camera"><SwitchCamera className="w-3.5 h-3.5" /></button>
+                    <div className="absolute top-2 right-2 flex items-center gap-1.5">
+                      {torchSupported && (
+                        <button type="button" onClick={toggleTorch}
+                          className={`backdrop-blur-sm text-white p-2 rounded-full hover:bg-black/90 ${torchOn ? 'bg-amber-500/80' : 'bg-black/70'}`}
+                          title={torchOn ? 'Flash off' : 'Flash on'}>
+                          {torchOn ? <Zap className="w-3.5 h-3.5" /> : <ZapOff className="w-3.5 h-3.5" />}
+                        </button>
+                      )}
+                      <button type="button" onClick={flipCamera}
+                        className="bg-black/70 backdrop-blur-sm text-white p-2 rounded-full hover:bg-black/90"
+                        title="Flip camera"><SwitchCamera className="w-3.5 h-3.5" /></button>
+                    </div>
                   </>
                 ) : (
                   <div className="w-full h-full flex flex-col items-center justify-center bg-zinc-800 text-white gap-3 p-6 text-center">
