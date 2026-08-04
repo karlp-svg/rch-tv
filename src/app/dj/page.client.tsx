@@ -918,7 +918,7 @@ export default function DJAdminPage() {
                           </button>
                         </div>
                         <div className="flex items-center justify-between gap-3">
-                          <span className="text-[10px] text-zinc-400">Show Buy the DJ a drink</span>
+                          <span className="text-[10px] text-zinc-400">Buy the DJ a drink</span>
                           <button
                             onClick={async () => {
                               const next = !thankYouTipEnabled;

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { ArrowLeft, Send, Camera, CheckCircle2, Clock, Loader2, XCircle, ChevronDown, AtSign, RefreshCw, SwitchCamera, X, Zap, ZapOff } from 'lucide-react';
+import { ArrowLeft, Send, Camera, CheckCircle2, Clock, Loader2, XCircle, ChevronDown, AtSign, RefreshCw, SwitchCamera, X } from 'lucide-react';
 import Link from 'next/link';
 import { getStoredPublicSession, useRequireValidSession } from '@/lib/useSessionGuard';
 import TwitchThankYouPlayer from '@/components/TwitchThankYouPlayer';
@@ -25,6 +25,11 @@ const statusConfig = {
 const CAPTURE_SIZE = 1080;
 const POLAROID_FRAME = 48;
 const POLAROID_BOTTOM = 400;
+
+type TorchCapableVideoTrack = {
+  getCapabilities?: () => { torch?: boolean };
+  applyConstraints: (constraints: MediaTrackConstraints) => Promise<void>;
+};
 
 function drawInstagramIcon(ctx: CanvasRenderingContext2D, x: number, y: number, size: number) {
   const cx = x + size / 2;
@@ -232,8 +237,8 @@ export default function MakeFamousPage() {
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user');
   const [cameraStarting, setCameraStarting] = useState(false);
-  const [torchOn, setTorchOn] = useState(false);
   const [torchSupported, setTorchSupported] = useState(false);
+  const [torchEnabled, setTorchEnabled] = useState(false);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -287,34 +292,16 @@ export default function MakeFamousPage() {
       streamRef.current = null;
     }
     if (videoRef.current) videoRef.current.srcObject = null;
-    setCameraOn(false);
-    setTorchOn(false);
+    setTorchEnabled(false);
     setTorchSupported(false);
-  };
-
-  const toggleTorch = async () => {
-    if (!streamRef.current) return;
-    const track = streamRef.current.getVideoTracks()[0];
-    if (!track) return;
-    try {
-      const next = !torchOn;
-      // `torch` is not in the TS DOM types but is widely supported on
-      // Android Chrome, iOS Safari 17+, and most mobile browsers via
-      // the ImageCapture / MediaStream constraints extension.
-      await track.applyConstraints({
-        advanced: [{ torch: next } as unknown as MediaTrackConstraints['advanced']],
-      } as MediaTrackConstraints);
-      setTorchOn(next);
-    } catch {
-      // If the device silently fails (e.g. hardware doesn't support it)
-      // hide the button entirely so the user isn't confused.
-      setTorchSupported(false);
-    }
+    setCameraOn(false);
   };
 
   const startCamera = useCallback(async (mode: 'user' | 'environment' = facingMode) => {
     setCameraError(null);
     setCameraStarting(true);
+    setTorchEnabled(false);
+    setTorchSupported(false);
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(t => t.stop());
       streamRef.current = null;
@@ -328,32 +315,10 @@ export default function MakeFamousPage() {
         audio: false,
       });
       streamRef.current = stream;
+      const videoTrack = stream.getVideoTracks()[0] as TorchCapableVideoTrack | undefined;
+      setTorchSupported(Boolean(videoTrack?.getCapabilities?.().torch));
       setFacingMode(mode);
       setCameraOn(true);
-      setTorchOn(false);
-      // Check if the video track supports the torch capability.
-      // Some browsers expose it in getCapabilities(), others just let you
-      // try applyConstraints and fail silently — we do both.
-      try {
-        const track = stream.getVideoTracks()[0];
-        if (track) {
-          const caps = (track as any).getCapabilities?.();
-          if (caps && 'torch' in caps) {
-            setTorchSupported(caps.torch === true || (Array.isArray(caps.torch) && caps.torch.includes(true)));
-          } else {
-            // Even if getCapabilities doesn't exist (old iOS etc.) try a
-            // zero-cost applyConstraints probe — if it succeeds the device
-            // supports torch.
-            try {
-              await track.applyConstraints({
-                advanced: [{ torch: false } as unknown as MediaTrackConstraintSet],
-              } as MediaTrackConstraints);
-              setTorchSupported(true);
-            } catch { setTorchSupported(false); }
-          }
-        }
-      } catch { setTorchSupported(false); }
-
       requestAnimationFrame(() => {
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
@@ -375,10 +340,24 @@ export default function MakeFamousPage() {
     }
   }, [facingMode]);
 
-  const flipCamera = () => {
-    setTorchOn(false);
-    setTorchSupported(false);
-    startCamera(facingMode === 'user' ? 'environment' : 'user');
+  const flipCamera = () => startCamera(facingMode === 'user' ? 'environment' : 'user');
+
+  const toggleTorch = async () => {
+    const track = streamRef.current?.getVideoTracks()[0] as TorchCapableVideoTrack | undefined;
+    if (!track || !torchSupported) return;
+
+    const next = !torchEnabled;
+    try {
+      // `torch` is supported by Chromium mobile cameras but is not yet part of
+      // TypeScript's standard MediaTrackConstraintSet definition.
+      const constraints = { advanced: [{ torch: next }] } as unknown as MediaTrackConstraints;
+      await track.applyConstraints(constraints);
+      setTorchEnabled(next);
+    } catch {
+      // A device may advertise a torch but reject it after a camera switch.
+      setTorchEnabled(false);
+      setTorchSupported(false);
+    }
   };
 
   // Fallback for environments where getUserMedia is blocked (e.g. embedded
@@ -541,17 +520,28 @@ export default function MakeFamousPage() {
                     <button type="button" onClick={stopCamera}
                       className="absolute top-2 left-2 bg-black/70 backdrop-blur-sm text-white p-2 rounded-full hover:bg-black/90"
                       title="Close camera"><X className="w-3.5 h-3.5" /></button>
-                    <div className="absolute top-2 right-2 flex items-center gap-1.5">
+                    <div className="absolute top-2 right-2 flex items-center gap-2">
                       {torchSupported && (
-                        <button type="button" onClick={toggleTorch}
-                          className={`backdrop-blur-sm text-white p-2 rounded-full hover:bg-black/90 ${torchOn ? 'bg-amber-500/80' : 'bg-black/70'}`}
-                          title={torchOn ? 'Flash off' : 'Flash on'}>
-                          {torchOn ? <Zap className="w-3.5 h-3.5" /> : <ZapOff className="w-3.5 h-3.5" />}
+                        <button
+                          type="button"
+                          onClick={toggleTorch}
+                          aria-pressed={torchEnabled}
+                          className={`backdrop-blur-sm p-2 rounded-full transition-colors ${torchEnabled ? 'bg-amber-400 text-black hover:bg-amber-300' : 'bg-black/70 text-white hover:bg-black/90'}`}
+                          title={torchEnabled ? 'Turn off camera torch' : 'Turn on camera torch'}
+                        >
+                          <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                            <path d="M13 2 3 14h7l-1 8 10-12h-7l1-8z" />
+                          </svg>
                         </button>
                       )}
-                      <button type="button" onClick={flipCamera}
+                      <button
+                        type="button"
+                        onClick={flipCamera}
                         className="bg-black/70 backdrop-blur-sm text-white p-2 rounded-full hover:bg-black/90"
-                        title="Flip camera"><SwitchCamera className="w-3.5 h-3.5" /></button>
+                        title="Flip camera"
+                      >
+                        <SwitchCamera className="w-3.5 h-3.5" />
+                      </button>
                     </div>
                   </>
                 ) : (
@@ -739,8 +729,8 @@ export default function MakeFamousPage() {
                   rel="noopener noreferrer"
                   className="w-full mb-3 py-3 bg-gradient-to-r from-yellow-500 to-amber-500 hover:brightness-110 text-black font-semibold rounded-2xl text-sm flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
                 >
-                  <span className="text-lg">🍻</span>
-                  Buy the DJ a drink
+                <span className="text-lg">💸</span>
+                Buy the DJ a drink
                 </a>
               )}
               <button
