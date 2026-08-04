@@ -272,10 +272,8 @@ export default function DJAdminPage() {
     } catch (_) {}
   };
 
-  const buildPublicUrl = (session: string) => {
-    const base = process.env.NEXT_PUBLIC_PUBLIC_APP_URL || (typeof window !== 'undefined' ? window.location.origin : '');
-    return `${base.replace(/\/$/, '')}/?session=${encodeURIComponent(session)}`;
-  };
+  const buildPublicUrl = (session: string) =>
+    `https://rch-tv.vercel.app/?session=${encodeURIComponent(session)}`;
 
   const fetchPublicSession = async () => {
     try {

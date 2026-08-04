@@ -235,7 +235,8 @@ export default function MakeFamousPage() {
 
   const [cameraOn, setCameraOn] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
-  const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user');
+  // Start on the rear camera: this is where phones normally expose the LED torch.
+  const [facingMode, setFacingMode] = useState<'user' | 'environment'>('environment');
   const [cameraStarting, setCameraStarting] = useState(false);
   const [torchSupported, setTorchSupported] = useState(false);
   const [torchEnabled, setTorchEnabled] = useState(false);
@@ -521,19 +522,26 @@ export default function MakeFamousPage() {
                       className="absolute top-2 left-2 bg-black/70 backdrop-blur-sm text-white p-2 rounded-full hover:bg-black/90"
                       title="Close camera"><X className="w-3.5 h-3.5" /></button>
                     <div className="absolute top-2 right-2 flex items-center gap-2">
-                      {torchSupported && (
-                        <button
-                          type="button"
-                          onClick={toggleTorch}
-                          aria-pressed={torchEnabled}
-                          className={`backdrop-blur-sm p-2 rounded-full transition-colors ${torchEnabled ? 'bg-amber-400 text-black hover:bg-amber-300' : 'bg-black/70 text-white hover:bg-black/90'}`}
-                          title={torchEnabled ? 'Turn off camera torch' : 'Turn on camera torch'}
-                        >
-                          <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                            <path d="M13 2 3 14h7l-1 8 10-12h-7l1-8z" />
-                          </svg>
-                        </button>
-                      )}
+                      <button
+                        type="button"
+                        onClick={toggleTorch}
+                        disabled={!torchSupported}
+                        aria-pressed={torchEnabled}
+                        aria-label={torchSupported ? (torchEnabled ? 'Turn off camera flash' : 'Turn on camera flash') : 'Camera flash is unavailable; try the rear camera'}
+                        className={`backdrop-blur-sm px-2.5 py-2 rounded-full text-[10px] font-bold tracking-wide flex items-center gap-1 transition-colors ${
+                          torchEnabled
+                            ? 'bg-amber-400 text-black hover:bg-amber-300'
+                            : torchSupported
+                              ? 'bg-black/70 text-white hover:bg-black/90'
+                              : 'bg-black/40 text-white/45 cursor-not-allowed'
+                        }`}
+                        title={torchSupported ? (torchEnabled ? 'Turn off camera flash' : 'Turn on camera flash') : 'Flash is available on supported rear cameras'}
+                      >
+                        <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                          <path d="M13 2 3 14h7l-1 8 10-12h-7l1-8z" />
+                        </svg>
+                        FLASH
+                      </button>
                       <button
                         type="button"
                         onClick={flipCamera}
@@ -543,6 +551,13 @@ export default function MakeFamousPage() {
                         <SwitchCamera className="w-3.5 h-3.5" />
                       </button>
                     </div>
+                    {!torchSupported && (
+                      <div className="absolute bottom-3 inset-x-3 text-center pointer-events-none">
+                        <span className="inline-block rounded-full bg-black/60 backdrop-blur-sm px-2.5 py-1 text-[9px] text-white/70">
+                          Flash needs a supported rear camera
+                        </span>
+                      </div>
+                    )}
                   </>
                 ) : (
                   <div className="w-full h-full flex flex-col items-center justify-center bg-zinc-800 text-white gap-3 p-6 text-center">
@@ -550,7 +565,7 @@ export default function MakeFamousPage() {
                       <Camera className="w-7 h-7 text-white/80" />
                     </div>
                     <div className="text-sm font-medium">Take your polaroid</div>
-                    <button type="button" onClick={() => startCamera('user')} disabled={cameraStarting}
+                    <button type="button" onClick={() => startCamera('environment')} disabled={cameraStarting}
                       className="px-5 py-2 bg-white text-black rounded-full text-xs font-semibold flex items-center gap-2 disabled:opacity-60">
                       {cameraStarting ? <>OPENING <Loader2 className="w-3.5 h-3.5 animate-spin" /></> : <>OPEN CAMERA <Camera className="w-3.5 h-3.5" /></>}
                     </button>
