@@ -5,8 +5,7 @@ export const dynamic = 'force-dynamic';
 
 export default async function QRCodePage() {
   const session = await getOrCreatePublicSession();
-  const origin = process.env.NEXT_PUBLIC_PUBLIC_APP_URL || 'https://rch-tv.vercel.app';
-  const url = `${origin}/?session=${encodeURIComponent(session)}`;
+  const url = `https://rch-tv.vercel.app/?session=${encodeURIComponent(session)}`;
 
   const qrDataUrl = await QRCode.toDataURL(url, {
     margin: 1,

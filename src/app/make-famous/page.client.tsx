@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { ArrowLeft, Send, Camera, CheckCircle2, Clock, Loader2, XCircle, ChevronDown, AtSign, RefreshCw, SwitchCamera, X, Zap, ZapOff } from 'lucide-react';
+import { ArrowLeft, Send, Camera, CheckCircle2, Clock, Loader2, XCircle, ChevronDown, AtSign, RefreshCw, SwitchCamera, X } from 'lucide-react';
 import Link from 'next/link';
 import { getStoredPublicSession, useRequireValidSession } from '@/lib/useSessionGuard';
 import TwitchThankYouPlayer from '@/components/TwitchThankYouPlayer';
@@ -25,6 +25,12 @@ const statusConfig = {
 const CAPTURE_SIZE = 1080;
 const POLAROID_FRAME = 48;
 const POLAROID_BOTTOM = 400;
+
+type TorchCapableVideoTrack = {
+  getCapabilities?: () => { torch?: boolean };
+  getSettings?: () => { facingMode?: string; torch?: boolean };
+  applyConstraints: (constraints: MediaTrackConstraints) => Promise<void>;
+};
 
 function drawInstagramIcon(ctx: CanvasRenderingContext2D, x: number, y: number, size: number) {
   const cx = x + size / 2;
@@ -230,9 +236,15 @@ export default function MakeFamousPage() {
 
   const [cameraOn, setCameraOn] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
-  const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user');
+  // Start on the rear camera: this is where phones normally expose the LED torch.
+  const [facingMode, setFacingMode] = useState<'user' | 'environment'>('environment');
   const [cameraStarting, setCameraStarting] = useState(false);
-  const [torchOn, setTorchOn] = useState(false);
+  const [torchSupported, setTorchSupported] = useState(false);
+  const [torchEnabled, setTorchEnabled] = useState(false);
+  // Front cameras usually have no physical LED; this arms a white screen burst
+  // immediately before capture as a usable low-light fallback.
+  const [screenFlashEnabled, setScreenFlashEnabled] = useState(false);
+  const [screenFlashBurst, setScreenFlashBurst] = useState(false);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -286,50 +298,20 @@ export default function MakeFamousPage() {
       streamRef.current = null;
     }
     if (videoRef.current) videoRef.current.srcObject = null;
+    setTorchEnabled(false);
+    setTorchSupported(false);
+    setScreenFlashEnabled(false);
+    setScreenFlashBurst(false);
     setCameraOn(false);
-    setTorchOn(false);
-  };
-
-  const toggleTorch = async () => {
-    if (!streamRef.current) return;
-    const track = streamRef.current.getVideoTracks()[0];
-    if (!track) return;
-    const next = !torchOn;
-    try {
-      // Try the direct applyConstraints approach first (works on most devices).
-      await track.applyConstraints({
-        advanced: [{ torch: next } as unknown as MediaTrackConstraintSet],
-      } as MediaTrackConstraints);
-      setTorchOn(next);
-    } catch {
-      // Samsung browsers often reject applyConstraints after the fact.
-      // Re-open the camera stream with torch baked into the initial
-      // getUserMedia constraints — this is the reliable path on Samsung/Android.
-      try {
-        if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop());
-        const constraints: MediaStreamConstraints = {
-          video: {
-            facingMode: { exact: facingMode },
-            torch: next,
-          } as unknown as MediaTrackConstraints,
-          audio: false,
-        };
-        const stream = await navigator.mediaDevices.getUserMedia(constraints);
-        streamRef.current = stream;
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          videoRef.current.play().catch(() => {});
-        }
-        setTorchOn(next);
-      } catch {
-        setTorchOn(false);
-      }
-    }
   };
 
   const startCamera = useCallback(async (mode: 'user' | 'environment' = facingMode) => {
     setCameraError(null);
     setCameraStarting(true);
+    setTorchEnabled(false);
+    setTorchSupported(false);
+    setScreenFlashEnabled(false);
+    setScreenFlashBurst(false);
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(t => t.stop());
       streamRef.current = null;
@@ -338,20 +320,29 @@ export default function MakeFamousPage() {
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia)
         throw new Error('Camera not supported on this device or browser');
 
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          facingMode: { ideal: mode },
-          width: { ideal: 1920 },
-          height: { ideal: 1920 },
-          torch: false,
-        } as unknown as MediaTrackConstraints,
-        audio: false,
-      });
+      const videoConstraints = {
+        facingMode: { exact: mode },
+        width: { ideal: 1920 },
+        height: { ideal: 1920 },
+      };
+      // `ideal` may silently return the selfie camera. Prefer `exact` so the
+      // rear LED is actually reachable on phones such as the Samsung S21.
+      let stream: MediaStream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ video: videoConstraints, audio: false });
+      } catch (exactError) {
+        if ((exactError as DOMException).name !== 'OverconstrainedError') throw exactError;
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { ...videoConstraints, facingMode: { ideal: mode } },
+          audio: false,
+        });
+      }
       streamRef.current = stream;
-      setFacingMode(mode);
+      const videoTrack = stream.getVideoTracks()[0] as TorchCapableVideoTrack | undefined;
+      setTorchSupported(Boolean(videoTrack?.getCapabilities?.().torch));
+      const actualFacingMode = videoTrack?.getSettings?.().facingMode;
+      setFacingMode(actualFacingMode === 'user' || actualFacingMode === 'environment' ? actualFacingMode : mode);
       setCameraOn(true);
-      setTorchOn(false);
-
       requestAnimationFrame(() => {
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
@@ -373,9 +364,39 @@ export default function MakeFamousPage() {
     }
   }, [facingMode]);
 
-  const flipCamera = () => {
-    setTorchOn(false);
-    startCamera(facingMode === 'user' ? 'environment' : 'user');
+  const flipCamera = () => startCamera(facingMode === 'user' ? 'environment' : 'user');
+
+  const toggleFlash = async () => {
+    const track = streamRef.current?.getVideoTracks()[0] as TorchCapableVideoTrack | undefined;
+    if (!track) return;
+
+    // If screen flash is armed, this press simply turns it off.
+    if (screenFlashEnabled) {
+      setScreenFlashEnabled(false);
+      return;
+    }
+
+    const nextTorchState = !torchEnabled;
+    try {
+      // Try the real hardware torch even if capability reporting is missing.
+      // Several Samsung/Android combinations support the constraint but omit
+      // `torch` from getCapabilities(). Chromium accepts the direct form;
+      // older implementations accept it only inside `advanced`.
+      try {
+        await track.applyConstraints({ torch: nextTorchState } as unknown as MediaTrackConstraints);
+      } catch {
+        await track.applyConstraints({ advanced: [{ torch: nextTorchState }] } as unknown as MediaTrackConstraints);
+      }
+      setTorchSupported(true);
+      setTorchEnabled(nextTorchState);
+      setScreenFlashEnabled(false);
+    } catch {
+      setTorchEnabled(false);
+      setTorchSupported(false);
+      // No web-accessible hardware torch (typical of front cameras): arm a
+      // bright screen flash for the moment the shutter is pressed instead.
+      setScreenFlashEnabled(true);
+    }
   };
 
   // Fallback for environments where getUserMedia is blocked (e.g. embedded
@@ -407,9 +428,17 @@ export default function MakeFamousPage() {
     reader.readAsDataURL(file);
   };
 
-  const capturePhoto = () => {
+  const capturePhoto = async () => {
     const video = videoRef.current;
     if (!video || !video.videoWidth || !video.videoHeight) return;
+
+    // Let the browser paint the full-screen white overlay and physically light
+    // the subject before sampling the front-camera frame.
+    if (screenFlashEnabled && !torchEnabled) {
+      setScreenFlashBurst(true);
+      await new Promise(resolve => setTimeout(resolve, 180));
+    }
+
     const vw = video.videoWidth;
     const vh = video.videoHeight;
     const sqSize = Math.min(vw, vh);
@@ -419,10 +448,14 @@ export default function MakeFamousPage() {
     canvas.width = CAPTURE_SIZE;
     canvas.height = CAPTURE_SIZE;
     const ctx = canvas.getContext('2d');
-    if (!ctx) return;
+    if (!ctx) {
+      setScreenFlashBurst(false);
+      return;
+    }
     if (facingMode === 'user') { ctx.translate(CAPTURE_SIZE, 0); ctx.scale(-1, 1); }
     ctx.drawImage(video, sx, sy, sqSize, sqSize, 0, 0, CAPTURE_SIZE, CAPTURE_SIZE);
     setCapturedRaw(canvas.toDataURL('image/jpeg', 0.9));
+    setScreenFlashBurst(false);
     stopCamera();
   };
 
@@ -486,6 +519,7 @@ export default function MakeFamousPage() {
 
   return (
     <main className="min-h-[100dvh] bg-zinc-950 text-white">
+      {screenFlashBurst && <div className="fixed inset-0 z-[100] bg-white pointer-events-none" aria-hidden="true" />}
       <div className="max-w-md mx-auto px-5 pt-5 pb-3">
         <Link href="/dashboard" className="inline-flex items-center gap-1.5 text-zinc-400 hover:text-white mb-4 text-xs">
           <ArrowLeft className="w-3.5 h-3.5" /> BACK
@@ -538,16 +572,40 @@ export default function MakeFamousPage() {
                     <button type="button" onClick={stopCamera}
                       className="absolute top-2 left-2 bg-black/70 backdrop-blur-sm text-white p-2 rounded-full hover:bg-black/90"
                       title="Close camera"><X className="w-3.5 h-3.5" /></button>
-                    <div className="absolute top-2 right-2 flex items-center gap-1.5">
-                      <button type="button" onClick={toggleTorch}
-                        className={`backdrop-blur-sm text-white p-2 rounded-full hover:bg-black/90 ${torchOn ? 'bg-amber-500/80' : 'bg-black/70'}`}
-                        title={torchOn ? 'Flash off' : 'Flash on'}>
-                        {torchOn ? <Zap className="w-3.5 h-3.5" /> : <ZapOff className="w-3.5 h-3.5" />}
+                    <div className="absolute top-2 right-2 flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={toggleFlash}
+                        aria-pressed={torchEnabled || screenFlashEnabled}
+                        aria-label={screenFlashEnabled ? 'Turn off screen flash' : torchEnabled ? 'Turn off camera flash' : 'Turn on camera flash'}
+                        className={`backdrop-blur-sm px-2.5 py-2 rounded-full text-[10px] font-bold tracking-wide flex items-center gap-1 transition-colors ${
+                          torchEnabled || screenFlashEnabled
+                            ? 'bg-amber-400 text-black hover:bg-amber-300'
+                            : 'bg-black/70 text-white hover:bg-black/90'
+                        }`}
+                        title={screenFlashEnabled ? 'Screen flash armed for the next photo' : torchEnabled ? 'Turn off camera flash' : 'Turn on camera flash'}
+                      >
+                        <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                          <path d="M13 2 3 14h7l-1 8 10-12h-7l1-8z" />
+                        </svg>
+                        {screenFlashEnabled ? 'SCREEN' : 'FLASH'}
                       </button>
-                      <button type="button" onClick={flipCamera}
+                      <button
+                        type="button"
+                        onClick={flipCamera}
                         className="bg-black/70 backdrop-blur-sm text-white p-2 rounded-full hover:bg-black/90"
-                        title="Flip camera"><SwitchCamera className="w-3.5 h-3.5" /></button>
+                        title="Flip camera"
+                      >
+                        <SwitchCamera className="w-3.5 h-3.5" />
+                      </button>
                     </div>
+                    {screenFlashEnabled && (
+                      <div className="absolute bottom-3 inset-x-3 text-center pointer-events-none">
+                        <span className="inline-block rounded-full bg-amber-400/90 px-2.5 py-1 text-[9px] font-semibold text-black">
+                          Screen flash armed for your next photo
+                        </span>
+                      </div>
+                    )}
                   </>
                 ) : (
                   <div className="w-full h-full flex flex-col items-center justify-center bg-zinc-800 text-white gap-3 p-6 text-center">
@@ -555,7 +613,7 @@ export default function MakeFamousPage() {
                       <Camera className="w-7 h-7 text-white/80" />
                     </div>
                     <div className="text-sm font-medium">Take your polaroid</div>
-                    <button type="button" onClick={() => startCamera('user')} disabled={cameraStarting}
+                    <button type="button" onClick={() => startCamera('environment')} disabled={cameraStarting}
                       className="px-5 py-2 bg-white text-black rounded-full text-xs font-semibold flex items-center gap-2 disabled:opacity-60">
                       {cameraStarting ? <>OPENING <Loader2 className="w-3.5 h-3.5 animate-spin" /></> : <>OPEN CAMERA <Camera className="w-3.5 h-3.5" /></>}
                     </button>
@@ -734,8 +792,8 @@ export default function MakeFamousPage() {
                   rel="noopener noreferrer"
                   className="w-full mb-3 py-3 bg-gradient-to-r from-yellow-500 to-amber-500 hover:brightness-110 text-black font-semibold rounded-2xl text-sm flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
                 >
-                  <span className="text-lg">🍻</span>
-                  Buy the DJ a drink
+                <span className="text-lg">💸</span>
+                Buy the DJ a drink
                 </a>
               )}
               <button

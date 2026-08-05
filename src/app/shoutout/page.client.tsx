@@ -288,7 +288,7 @@ export default function ShoutoutPage() {
                 rel="noopener noreferrer"
                 className="w-full mb-3 py-3 bg-gradient-to-r from-yellow-500 to-amber-500 hover:brightness-110 text-black font-semibold rounded-2xl text-sm flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
               >
-                <span className="text-lg">🍻</span>
+                <span className="text-lg">💸</span>
                 Buy the DJ a drink
               </a>
             )}
