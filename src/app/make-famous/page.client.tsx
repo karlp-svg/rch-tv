@@ -294,17 +294,36 @@ export default function MakeFamousPage() {
     if (!streamRef.current) return;
     const track = streamRef.current.getVideoTracks()[0];
     if (!track) return;
+    const next = !torchOn;
     try {
-      const next = !torchOn;
-      // `torch` is not in the TS DOM types but is widely supported on
-      // Android Chrome, iOS Safari 17+, and most mobile browsers via
-      // the ImageCapture / MediaStream constraints extension.
+      // Try the direct applyConstraints approach first (works on most devices).
       await track.applyConstraints({
         advanced: [{ torch: next } as unknown as MediaTrackConstraintSet],
       } as MediaTrackConstraints);
       setTorchOn(next);
     } catch {
-      setTorchOn(false);
+      // Samsung browsers often reject applyConstraints after the fact.
+      // Re-open the camera stream with torch baked into the initial
+      // getUserMedia constraints — this is the reliable path on Samsung/Android.
+      try {
+        if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop());
+        const constraints: MediaStreamConstraints = {
+          video: {
+            facingMode: { exact: facingMode },
+            torch: next,
+          } as unknown as MediaTrackConstraints,
+          audio: false,
+        };
+        const stream = await navigator.mediaDevices.getUserMedia(constraints);
+        streamRef.current = stream;
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          videoRef.current.play().catch(() => {});
+        }
+        setTorchOn(next);
+      } catch {
+        setTorchOn(false);
+      }
     }
   };
 
@@ -320,7 +339,12 @@ export default function MakeFamousPage() {
         throw new Error('Camera not supported on this device or browser');
 
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: { ideal: mode }, width: { ideal: 1920 }, height: { ideal: 1920 } },
+        video: {
+          facingMode: { ideal: mode },
+          width: { ideal: 1920 },
+          height: { ideal: 1920 },
+          torch: false,
+        } as unknown as MediaTrackConstraints,
         audio: false,
       });
       streamRef.current = stream;
