@@ -63,7 +63,7 @@ export default function TVPage() {
           if (data.session) {
             setPublicSession(data.session);
             const qr = await QRCode.toDataURL(
-              `https://rch-tv.vercel.app/?session=${encodeURIComponent(data.session)}`, 
+              `${typeof window !== 'undefined' ? window.location.origin : ''}/?session=${encodeURIComponent(data.session)}`,
               { margin: 2, width: 400, color: { dark: '#ffffff', light: '#00000000' } }
             );
             setPublicQr(qr);

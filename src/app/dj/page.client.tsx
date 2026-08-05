@@ -272,8 +272,10 @@ export default function DJAdminPage() {
     } catch (_) {}
   };
 
-  const buildPublicUrl = (session: string) =>
-    `https://rch-tv.vercel.app/?session=${encodeURIComponent(session)}`;
+  const buildPublicUrl = (session: string) => {
+    const base = process.env.NEXT_PUBLIC_PUBLIC_APP_URL || 'https://rch-tv.vercel.app';
+    return `${base.replace(/\/$/, '')}/?session=${encodeURIComponent(session)}`;
+  };
 
   const fetchPublicSession = async () => {
     try {
@@ -916,7 +918,7 @@ export default function DJAdminPage() {
                           </button>
                         </div>
                         <div className="flex items-center justify-between gap-3">
-                          <span className="text-[10px] text-zinc-400">Buy the DJ a drink</span>
+                          <span className="text-[10px] text-zinc-400">Show Buy the DJ a drink</span>
                           <button
                             onClick={async () => {
                               const next = !thankYouTipEnabled;
